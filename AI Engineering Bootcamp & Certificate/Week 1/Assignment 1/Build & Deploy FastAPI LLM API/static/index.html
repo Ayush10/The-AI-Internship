@@ -7,67 +7,84 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="app">
-        <header>
-            <h1>LLM API Playground</h1>
-            <p class="subtitle">AI Engineering Bootcamp — Week 1 Assignment</p>
-        </header>
+    <div class="layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>History</h2>
+                <button id="new-chat-btn" class="btn btn-new">+ New</button>
+            </div>
+            <div class="conversation-list" id="conversation-list">
+                <div class="sidebar-empty" id="sidebar-empty">No conversations yet</div>
+            </div>
+        </aside>
 
-        <div class="controls">
-            <div class="control-group">
-                <label for="provider">Model</label>
-                <select id="provider">
-                    <option value="gemini" selected>Google (Gemini Flash)</option>
-                    <option value="openai">OpenAI (GPT-4o Mini)</option>
-                    <option value="anthropic">Anthropic (Claude Sonnet)</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label for="mode">Mode</label>
-                <select id="mode">
-                    <option value="general">General Chat</option>
-                    <option value="summarize">Summarize</option>
-                    <option value="sentiment">Sentiment Analysis</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label for="prompt-version">Prompt Version</label>
-                <select id="prompt-version">
-                    <option value="0">Default (Best)</option>
-                    <option value="1">V1 — Direct</option>
-                    <option value="2">V2 — Guided</option>
-                    <option value="3">V3 — Chain-of-Thought</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="chat-container" id="chat-container">
-            <div class="welcome-message">
-                <p>Choose a model and mode above, then start chatting.</p>
-                <p>In <strong>Summarize</strong> mode, paste text to get a summary.<br>
-                   In <strong>Sentiment</strong> mode, paste text for sentiment analysis.<br>
-                   In <strong>General</strong> mode, just chat freely.</p>
-            </div>
-        </div>
-
-        <div class="input-area">
-            <textarea id="user-input" placeholder="Type your message..." rows="3"></textarea>
-            <div class="input-actions">
-                <button id="enhance-btn" class="btn btn-enhance" title="Enhance your prompt using prompt engineering principles">
-                    <span class="enhance-icon">&#9889;</span> Enhance
+        <div class="app">
+            <header>
+                <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle history">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
                 </button>
-                <button id="send-btn" class="btn btn-send">Send</button>
-            </div>
-        </div>
+                <div>
+                    <h1>LLM API Playground</h1>
+                    <p class="subtitle">AI Engineering Bootcamp — Week 1 Assignment</p>
+                </div>
+            </header>
 
-        <footer>
-            <div class="api-info">
-                <span>API Endpoints:</span>
-                <code>GET /health</code>
-                <code>POST /summarize</code>
-                <code>POST /analyze-sentiment</code>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="provider">Model</label>
+                    <select id="provider">
+                        <option value="gemini" selected>Google (Gemini Flash)</option>
+                        <option value="openai">OpenAI (GPT-4o Mini)</option>
+                        <option value="anthropic">Anthropic (Claude Sonnet)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="mode">Mode</label>
+                    <select id="mode">
+                        <option value="general">General Chat</option>
+                        <option value="summarize">Summarize</option>
+                        <option value="sentiment">Sentiment Analysis</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="prompt-version">Prompt Version</label>
+                    <select id="prompt-version">
+                        <option value="0">Default (Best)</option>
+                        <option value="1">V1 — Direct</option>
+                        <option value="2">V2 — Guided</option>
+                        <option value="3">V3 — Chain-of-Thought</option>
+                    </select>
+                </div>
             </div>
-        </footer>
+
+            <div class="chat-container" id="chat-container">
+                <div class="welcome-message">
+                    <p>Choose a model and mode above, then start chatting.</p>
+                    <p>In <strong>Summarize</strong> mode, paste text to get a summary.<br>
+                       In <strong>Sentiment</strong> mode, paste text for sentiment analysis.<br>
+                       In <strong>General</strong> mode, just chat freely.</p>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <textarea id="user-input" placeholder="Type your message..." rows="3"></textarea>
+                <div class="input-actions">
+                    <button id="enhance-btn" class="btn btn-enhance" title="Enhance your prompt using prompt engineering principles">
+                        <span class="enhance-icon">&#9889;</span> Enhance
+                    </button>
+                    <button id="send-btn" class="btn btn-send">Send</button>
+                </div>
+            </div>
+
+            <footer>
+                <div class="api-info">
+                    <span>API Endpoints:</span>
+                    <code>GET /health</code>
+                    <code>POST /summarize</code>
+                    <code>POST /analyze-sentiment</code>
+                </div>
+            </footer>
+        </div>
     </div>
 
     <script src="/static/app.js"></script>

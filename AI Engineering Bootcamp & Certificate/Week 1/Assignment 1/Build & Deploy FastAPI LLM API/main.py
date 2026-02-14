@@ -2,11 +2,12 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import UUID
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from fastapi.openapi.utils import get_openapi
+from sqlalchemy.orm import Session
 
 from schemas import (
     HealthResponse,
@@ -22,6 +23,8 @@ from prompts import (
     CHAT_SYSTEM_PROMPTS, ENHANCE_PROMPT_SYSTEM,
 )
 from config import DEFAULT_PROVIDER
+from models import init_db, get_db, Conversation, Message
+from history import router as history_router
 
 DESCRIPTION = """
 ## AI-Powered Text Analysis API
@@ -37,6 +40,7 @@ Supports **OpenAI GPT-4o Mini**, **Anthropic Claude Sonnet**, and **Google Gemin
 | **Sentiment Analysis** | Classify text as positive, negative, or neutral with confidence scores |
 | **Chat** | Interactive conversation with mode-specific system prompts |
 | **Prompt Enhancement** | Improve raw prompts using prompt engineering best practices |
+| **History** | All conversations are persisted and can be resumed |
 
 ### Prompt Engineering
 
@@ -61,6 +65,10 @@ tags_metadata = [
         "name": "Chat & Tools",
         "description": "Interactive chat and prompt engineering utilities.",
     },
+    {
+        "name": "History",
+        "description": "Conversation history — list, view, rename, and delete past conversations.",
+    },
 ]
 
 app = FastAPI(
@@ -76,7 +84,28 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+app.include_router(history_router)
+
 STATIC_DIR = Path(__file__).parent / "static"
+
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
+
+# --- Helpers for history persistence ---
+
+def _save_messages(db: Session, conversation_id: UUID | None, user_content: str, assistant_content: str, meta: dict | None = None):
+    if not conversation_id or not db:
+        return
+    convo = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not convo:
+        return
+    db.add(Message(conversation_id=convo.id, role="user", content=user_content))
+    db.add(Message(conversation_id=convo.id, role="assistant", content=assistant_content, meta=meta))
+    convo.updated_at = datetime.now(timezone.utc)
+    db.commit()
 
 
 # --- API Endpoints (assignment requirement) ---
@@ -105,6 +134,7 @@ def health():
 **Query Parameters:**
 - `provider` — Override the default LLM provider (`gemini`, `openai`, `anthropic`)
 - `prompt_version` — Select a prompt engineering strategy (1, 2, or 3)
+- `conversation_id` — Append this interaction to an existing conversation
 
 **Prompt Strategies:**
 | Version | Technique | Description |
@@ -118,6 +148,8 @@ def summarize(
     request: SummarizeRequest,
     provider: str = Query(default=None, description="LLM provider to use (gemini, openai, anthropic)"),
     prompt_version: int = Query(default=None, description="Prompt template version (1, 2, or 3)"),
+    conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
+    db: Session = Depends(get_db),
 ):
     provider_name = provider or DEFAULT_PROVIDER
     version = prompt_version or DEFAULT_SUMMARIZE_PROMPT
@@ -136,8 +168,11 @@ def summarize(
     except Exception as e:
         raise HTTPException(502, f"LLM provider error: {e}")
 
+    summary_text = summary.strip()
+    _save_messages(db, conversation_id, request.text, summary_text)
+
     return SummarizeResponse(
-        summary=summary.strip(),
+        summary=summary_text,
         provider=provider_name,
         prompt_version=version,
     )
@@ -155,6 +190,7 @@ Returns a confidence score (0.0 to 1.0) and a brief explanation.
 **Query Parameters:**
 - `provider` — Override the default LLM provider (`gemini`, `openai`, `anthropic`)
 - `prompt_version` — Select a prompt engineering strategy (1, 2, or 3)
+- `conversation_id` — Append this interaction to an existing conversation
 
 **Prompt Strategies:**
 | Version | Technique | Description |
@@ -168,6 +204,8 @@ def analyze_sentiment(
     request: SentimentRequest,
     provider: str = Query(default=None, description="LLM provider to use (gemini, openai, anthropic)"),
     prompt_version: int = Query(default=None, description="Prompt template version (1, 2, or 3)"),
+    conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
+    db: Session = Depends(get_db),
 ):
     provider_name = provider or DEFAULT_PROVIDER
     version = prompt_version or DEFAULT_SENTIMENT_PROMPT
@@ -187,6 +225,9 @@ def analyze_sentiment(
         raise HTTPException(502, f"LLM provider error: {e}")
 
     parsed = _parse_sentiment_json(raw_response)
+
+    display = f"Sentiment: {parsed['sentiment']}\nConfidence: {parsed['confidence']}\nExplanation: {parsed['explanation']}"
+    _save_messages(db, conversation_id, request.text, display, meta=parsed)
 
     return SentimentResponse(
         sentiment=parsed["sentiment"],
@@ -212,7 +253,11 @@ def analyze_sentiment(
 - `sentiment` — Sentiment analysis-focused assistant
 """,
 )
-def chat(request: ChatRequest):
+def chat(
+    request: ChatRequest,
+    conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
+    db: Session = Depends(get_db),
+):
     system_prompt = CHAT_SYSTEM_PROMPTS.get(request.mode, CHAT_SYSTEM_PROMPTS["general"])
     llm = get_provider(request.provider)
 
@@ -223,7 +268,10 @@ def chat(request: ChatRequest):
     except Exception as e:
         raise HTTPException(502, f"LLM provider error: {e}")
 
-    return ChatResponse(response=response.strip(), provider=request.provider)
+    response_text = response.strip()
+    _save_messages(db, conversation_id, request.message, response_text)
+
+    return ChatResponse(response=response_text, provider=request.provider)
 
 
 @app.post(
@@ -236,7 +284,11 @@ def chat(request: ChatRequest):
 Applies relevant techniques such as role prompting, specificity, chain-of-thought, few-shot cues, and output formatting.
 """,
 )
-def enhance_prompt(request: EnhanceRequest):
+def enhance_prompt(
+    request: EnhanceRequest,
+    conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
+    db: Session = Depends(get_db),
+):
     provider_name = DEFAULT_PROVIDER
     llm = get_provider(provider_name)
 
@@ -254,15 +306,18 @@ def enhance_prompt(request: EnhanceRequest):
     try:
         cleaned = re.sub(r"```(?:json)?\s*", "", raw).strip().rstrip("`")
         data = json.loads(cleaned)
-        return EnhanceResponse(
-            enhanced_prompt=data["enhanced_prompt"],
-            techniques_applied=data.get("techniques_applied", []),
-        )
+        enhanced = data["enhanced_prompt"]
+        techniques = data.get("techniques_applied", [])
     except (json.JSONDecodeError, KeyError):
-        return EnhanceResponse(
-            enhanced_prompt=raw.strip(),
-            techniques_applied=["raw_enhancement"],
-        )
+        enhanced = raw.strip()
+        techniques = ["raw_enhancement"]
+
+    _save_messages(db, conversation_id, request.prompt, enhanced, meta={"techniques_applied": techniques})
+
+    return EnhanceResponse(
+        enhanced_prompt=enhanced,
+        techniques_applied=techniques,
+    )
 
 
 # --- Static files (chat UI) ---

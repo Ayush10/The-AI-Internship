@@ -1,5 +1,8 @@
+from datetime import datetime
+from typing import Literal, Optional
+from uuid import UUID
+
 from pydantic import BaseModel, Field
-from typing import Literal
 
 
 class HealthResponse(BaseModel):
@@ -96,3 +99,63 @@ class EnhanceResponse(BaseModel):
         description="List of prompt engineering techniques that were applied",
         examples=[["role_prompting", "specificity", "output_format"]],
     )
+
+
+# --- History Schemas ---
+
+class ConversationCreateRequest(BaseModel):
+    title: Optional[str] = Field(default=None, description="Conversation title (auto-generated from first message if omitted)")
+    endpoint: str = Field(description="API endpoint type", examples=["chat"])
+    mode: Optional[str] = Field(default=None, description="Chat mode (general, summarize, sentiment)")
+    provider: str = Field(default="gemini", description="LLM provider")
+    prompt_version: Optional[int] = Field(default=None, description="Prompt template version")
+
+
+class ConversationCreateResponse(BaseModel):
+    id: UUID
+    title: str
+    endpoint: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ConversationListItem(BaseModel):
+    id: UUID
+    title: str
+    endpoint: str
+    provider: str
+    mode: Optional[str] = None
+    message_count: int = 0
+    updated_at: datetime
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class MessageOut(BaseModel):
+    id: UUID
+    role: str
+    content: str
+    meta: Optional[dict] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ConversationDetail(BaseModel):
+    id: UUID
+    title: str
+    endpoint: str
+    mode: Optional[str] = None
+    provider: str
+    prompt_version: Optional[int] = None
+    messages: list[MessageOut]
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ConversationUpdateRequest(BaseModel):
+    title: Optional[str] = None
