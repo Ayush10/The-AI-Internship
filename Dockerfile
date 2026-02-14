@@ -2,7 +2,10 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY "AI Engineering Bootcamp & Certificate/Week 1/Assignment 1/Build & Deploy FastAPI LLM API/" .
+COPY . /repo
+
+RUN cp -r "/repo/AI Engineering Bootcamp & Certificate/Week 1/Assignment 1/Build & Deploy FastAPI LLM API/"* . && \
+    rm -rf /repo
 
 RUN pip install --no-cache-dir -r requirements.txt
 
