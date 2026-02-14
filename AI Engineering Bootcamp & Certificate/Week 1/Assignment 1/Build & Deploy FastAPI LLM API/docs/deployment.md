@@ -1,166 +1,107 @@
-# Deployment Guide — VPS (Monorepo)
+# Deployment Guide — Coolify (Docker)
 
 ## Overview
-The repo root is `The AI Internship/` (monorepo). This assignment lives at:
+
+The repo root is `The-AI-Internship/` (monorepo). This assignment lives at:
 ```
 AI Engineering Bootcamp & Certificate/Week 1/Assignment 1/Build & Deploy FastAPI LLM API/
 ```
-Deployed at: `https://theaiinternship.ayushojha.com/aiengineeringbootcamp/week1/assignment1/`
+
+**Live URL:** https://theaiinternship.ayushojha.com
 
 ---
 
-## 1. DNS Setup
+## Architecture
 
-Add an **A record** in your domain registrar (where `ayushojha.com` is managed):
+- **Platform:** VPS at `72.62.82.57`, managed by [Coolify](https://coolify.ayushojha.com) (self-hosted PaaS)
+- **Container:** Docker, built from `Dockerfile` at repo root
+- **Reverse Proxy:** Traefik (managed by Coolify), auto-SSL via Let's Encrypt
+- **Auto-Deploy:** GitHub webhook triggers rebuild on every push to `main`
+
+---
+
+## Coolify Configuration
 
 | Field | Value |
 |-------|-------|
-| Type  | A |
-| Host  | theaiinternship |
-| Value | 72.62.82.57 |
-| TTL   | 300 (or Auto) |
+| App UUID | `hkw4co8cs8000scckg404s4w` |
+| Project UUID | `dk8kkwc8k0c8osowk4s4ccsw` |
+| Server | Personal Portfolio (`pok4wwo8wo8wgo8cc0g80s4c`) |
+| Domain | `https://theaiinternship.ayushojha.com` |
+| Build Pack | Dockerfile |
+| Git Repo | `git@github.com:Ayush10/The-AI-Internship.git` |
+| Branch | `main` |
+| Exposed Port | `8000` |
+| Deploy Key UUID | `c48g8ccgw804sowkk4wkos40` |
 
-Wait a few minutes for DNS propagation. Verify with:
-```bash
-dig theaiinternship.ayushojha.com +short
-# Should return: 72.62.82.57
+---
+
+## Environment Variables
+
+Set these in Coolify UI or API:
+
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | OpenAI API key |
+| `ANTHROPIC_API_KEY` | Anthropic API key |
+| `GOOGLE_API_KEY` | Google Gemini API key |
+| `DEFAULT_PROVIDER` | Default LLM provider (`gemini`, `openai`, or `anthropic`) |
+
+---
+
+## Dockerfile
+
+The `Dockerfile` at the repo root handles the nested directory structure:
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY . /repo
+RUN cp -r "/repo/AI Engineering Bootcamp & Certificate/Week 1/Assignment 1/Build & Deploy FastAPI LLM API/"* . && \
+    rm -rf /repo
+RUN pip install --no-cache-dir -r requirements.txt
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 ---
 
-## 2. VPS Setup (SSH to 72.62.82.57)
+## Auto-Deploy Webhook
 
-### Clone the monorepo
+| Field | Value |
+|-------|-------|
+| GitHub Hook ID | `596261411` |
+| Webhook Secret | `5bc28cfb9ad39472b88260b5bfa45f78` |
+| Webhook URL | `https://coolify.ayushojha.com/webhooks/source/github/events/manual?token=5bc28cfb9ad39472b88260b5bfa45f78&uuid=hkw4co8cs8000scckg404s4w` |
+
+Every push to `main` triggers an automatic rebuild and deploy.
+
+---
+
+## Manual Deploy
+
+Via Coolify API:
 ```bash
-ssh ayush@72.62.82.57
-
-mkdir -p ~/apps
-cd ~/apps
-git clone <your-github-repo-url> the-ai-internship
-```
-
-### Set up the assignment's venv
-```bash
-cd ~/apps/the-ai-internship/AI\ Engineering\ Bootcamp\ \&\ Certificate/Week\ 1/Assignment\ 1/Build\ \&\ Deploy\ FastAPI\ LLM\ API/
-
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-### Create .env file
-```bash
-cat > .env << 'EOF'
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-GOOGLE_API_KEY=AI...
-DEFAULT_PROVIDER=openai
-EOF
-```
-
-### Test the app
-```bash
-source .venv/bin/activate
-uvicorn main:app --host 127.0.0.1 --port 8001
-# Visit http://72.62.82.57:8001/health to verify
+curl -X POST "https://coolify.ayushojha.com/api/v1/deploy?uuid=hkw4co8cs8000scckg404s4w" \
+  -H "Authorization: Bearer <COOLIFY_API_TOKEN>"
 ```
 
 ---
 
-## 3. Systemd Service
+## API Endpoints
 
-Create the service file:
-```bash
-sudo nano /etc/systemd/system/week1-assignment1.service
-```
-
-Paste:
-```ini
-[Unit]
-Description=AI Internship - Week 1 Assignment 1 API
-After=network.target
-
-[Service]
-User=ayush
-WorkingDirectory=/home/ayush/apps/the-ai-internship/AI Engineering Bootcamp & Certificate/Week 1/Assignment 1/Build & Deploy FastAPI LLM API
-ExecStart=/home/ayush/apps/the-ai-internship/AI Engineering Bootcamp & Certificate/Week 1/Assignment 1/Build & Deploy FastAPI LLM API/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8001
-Restart=always
-RestartSec=5
-EnvironmentFile=/home/ayush/apps/the-ai-internship/AI Engineering Bootcamp & Certificate/Week 1/Assignment 1/Build & Deploy FastAPI LLM API/.env
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable week1-assignment1
-sudo systemctl start week1-assignment1
-sudo systemctl status week1-assignment1
-```
-
----
-
-## 4. Nginx Configuration
-
-Create the Nginx config:
-```bash
-sudo nano /etc/nginx/sites-available/theaiinternship.ayushojha.com
-```
-
-Paste:
-```nginx
-server {
-    listen 80;
-    server_name theaiinternship.ayushojha.com;
-
-    location /aiengineeringbootcamp/week1/assignment1/ {
-        proxy_pass http://127.0.0.1:8001/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-Enable and test:
-```bash
-sudo ln -s /etc/nginx/sites-available/theaiinternship.ayushojha.com /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
----
-
-## 5. SSL with Let's Encrypt
-
-```bash
-sudo certbot --nginx -d theaiinternship.ayushojha.com
-```
-
-Certbot will auto-update the Nginx config to add SSL. Verify:
-```bash
-curl https://theaiinternship.ayushojha.com/aiengineeringbootcamp/week1/assignment1/health
-```
-
----
-
-## 6. Updating (after git push)
-
-```bash
-ssh ayush@72.62.82.57
-cd ~/apps/the-ai-internship
-git pull
-sudo systemctl restart week1-assignment1
-```
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check |
+| GET | `/` | Web UI |
+| GET | `/docs` | FastAPI auto-generated docs |
+| POST | `/summarize` | Text summarization |
+| POST | `/analyze-sentiment` | Sentiment analysis |
+| POST | `/chat` | Chat interface |
+| POST | `/enhance-prompt` | Prompt enhancement |
 
 ---
 
 ## Monorepo Notes
 
-Future assignments/projects can be added under the same repo and deployed as separate services:
-- Each gets its own systemd service (different port: 8002, 8003, etc.)
-- Each gets its own Nginx location block under the same subdomain
-- Example: `/aiengineeringbootcamp/week2/assignment1/` → port 8002
+Future assignments/projects can share the same Coolify app by updating the `Dockerfile` to serve multiple services, or can be deployed as separate Coolify apps from the same repo.
