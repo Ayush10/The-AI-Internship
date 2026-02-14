@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.openapi.utils import get_openapi
 
 from schemas import (
     HealthResponse,
@@ -22,14 +23,71 @@ from prompts import (
 )
 from config import DEFAULT_PROVIDER
 
-app = FastAPI(title="LLM Summarizer & Sentiment API")
+DESCRIPTION = """
+## AI-Powered Text Analysis API
+
+A multi-provider LLM gateway built with FastAPI for the **AI Engineering Bootcamp**.
+Supports **OpenAI GPT-4o Mini**, **Anthropic Claude Sonnet**, and **Google Gemini Flash**.
+
+### Core Capabilities
+
+| Feature | Description |
+|---------|-------------|
+| **Summarization** | Condense long texts with configurable prompt strategies |
+| **Sentiment Analysis** | Classify text as positive, negative, or neutral with confidence scores |
+| **Chat** | Interactive conversation with mode-specific system prompts |
+| **Prompt Enhancement** | Improve raw prompts using prompt engineering best practices |
+
+### Prompt Engineering
+
+Each analysis endpoint supports **3 prompt variations** to compare engineering techniques:
+- **v1** — Direct and minimal
+- **v2** — Role assignment with guided rules *(default)*
+- **v3** — Chain-of-thought reasoning
+
+Switch between strategies using the `prompt_version` query parameter.
+"""
+
+tags_metadata = [
+    {
+        "name": "Health",
+        "description": "Service health monitoring.",
+    },
+    {
+        "name": "Text Analysis",
+        "description": "Core NLP endpoints — summarization and sentiment analysis powered by LLMs.",
+    },
+    {
+        "name": "Chat & Tools",
+        "description": "Interactive chat and prompt engineering utilities.",
+    },
+]
+
+app = FastAPI(
+    title="The AI Internship API",
+    summary="Multi-provider LLM gateway for text summarization, sentiment analysis, and chat.",
+    description=DESCRIPTION,
+    version="1.0.0",
+    openapi_tags=tags_metadata,
+    license_info={
+        "name": "MIT",
+    },
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
 
 STATIC_DIR = Path(__file__).parent / "static"
 
 
 # --- API Endpoints (assignment requirement) ---
 
-@app.get("/health", response_model=HealthResponse)
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    tags=["Health"],
+    summary="Health Check",
+    description="Returns the current service status and UTC timestamp. Use this to verify the API is running.",
+)
 def health():
     return HealthResponse(
         status="healthy",
@@ -37,11 +95,29 @@ def health():
     )
 
 
-@app.post("/summarize", response_model=SummarizeResponse)
+@app.post(
+    "/summarize",
+    response_model=SummarizeResponse,
+    tags=["Text Analysis"],
+    summary="Summarize Text",
+    description="""Generate a concise summary of the provided text using an LLM.
+
+**Query Parameters:**
+- `provider` — Override the default LLM provider (`gemini`, `openai`, `anthropic`)
+- `prompt_version` — Select a prompt engineering strategy (1, 2, or 3)
+
+**Prompt Strategies:**
+| Version | Technique | Description |
+|---------|-----------|-------------|
+| 1 | Direct | Minimal instruction — "Summarize in N words" |
+| 2 | Guided *(default)* | Expert role + explicit rules + output anchor |
+| 3 | Chain-of-Thought | Identify key points first, then summarize |
+""",
+)
 def summarize(
     request: SummarizeRequest,
-    provider: str = Query(default=None),
-    prompt_version: int = Query(default=None),
+    provider: str = Query(default=None, description="LLM provider to use (gemini, openai, anthropic)"),
+    prompt_version: int = Query(default=None, description="Prompt template version (1, 2, or 3)"),
 ):
     provider_name = provider or DEFAULT_PROVIDER
     version = prompt_version or DEFAULT_SUMMARIZE_PROMPT
@@ -67,11 +143,31 @@ def summarize(
     )
 
 
-@app.post("/analyze-sentiment", response_model=SentimentResponse)
+@app.post(
+    "/analyze-sentiment",
+    response_model=SentimentResponse,
+    tags=["Text Analysis"],
+    summary="Analyze Sentiment",
+    description="""Classify the sentiment of the provided text as **positive**, **negative**, or **neutral**.
+
+Returns a confidence score (0.0 to 1.0) and a brief explanation.
+
+**Query Parameters:**
+- `provider` — Override the default LLM provider (`gemini`, `openai`, `anthropic`)
+- `prompt_version` — Select a prompt engineering strategy (1, 2, or 3)
+
+**Prompt Strategies:**
+| Version | Technique | Description |
+|---------|-----------|-------------|
+| 1 | Direct JSON | Explicit JSON format request, no examples |
+| 2 | Few-Shot *(default)* | Expert role + example output |
+| 3 | Step-by-Step | Chain-of-thought reasoning before JSON |
+""",
+)
 def analyze_sentiment(
     request: SentimentRequest,
-    provider: str = Query(default=None),
-    prompt_version: int = Query(default=None),
+    provider: str = Query(default=None, description="LLM provider to use (gemini, openai, anthropic)"),
+    prompt_version: int = Query(default=None, description="Prompt template version (1, 2, or 3)"),
 ):
     provider_name = provider or DEFAULT_PROVIDER
     version = prompt_version or DEFAULT_SENTIMENT_PROMPT
@@ -103,7 +199,19 @@ def analyze_sentiment(
 
 # --- Chat & Enhancement Endpoints (UI support) ---
 
-@app.post("/chat", response_model=ChatResponse)
+@app.post(
+    "/chat",
+    response_model=ChatResponse,
+    tags=["Chat & Tools"],
+    summary="Chat with AI",
+    description="""Send a message to an AI assistant with mode-specific behavior.
+
+**Modes:**
+- `general` — General-purpose helpful assistant
+- `summarize` — Summarization-focused assistant
+- `sentiment` — Sentiment analysis-focused assistant
+""",
+)
 def chat(request: ChatRequest):
     system_prompt = CHAT_SYSTEM_PROMPTS.get(request.mode, CHAT_SYSTEM_PROMPTS["general"])
     llm = get_provider(request.provider)
@@ -118,7 +226,16 @@ def chat(request: ChatRequest):
     return ChatResponse(response=response.strip(), provider=request.provider)
 
 
-@app.post("/enhance-prompt", response_model=EnhanceResponse)
+@app.post(
+    "/enhance-prompt",
+    response_model=EnhanceResponse,
+    tags=["Chat & Tools"],
+    summary="Enhance a Prompt",
+    description="""Improve a raw prompt using established prompt engineering techniques from [promptingguide.ai](https://www.promptingguide.ai/).
+
+Applies relevant techniques such as role prompting, specificity, chain-of-thought, few-shot cues, and output formatting.
+""",
+)
 def enhance_prompt(request: EnhanceRequest):
     provider_name = DEFAULT_PROVIDER
     llm = get_provider(provider_name)
@@ -153,7 +270,7 @@ def enhance_prompt(request: EnhanceRequest):
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 def serve_ui():
     return FileResponse(str(STATIC_DIR / "index.html"))
 
