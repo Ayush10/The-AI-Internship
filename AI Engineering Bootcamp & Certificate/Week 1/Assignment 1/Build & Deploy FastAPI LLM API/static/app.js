@@ -2,25 +2,129 @@ const chatContainer = document.getElementById("chat-container");
 const userInput = document.getElementById("user-input");
 const sendBtn = document.getElementById("send-btn");
 const enhanceBtn = document.getElementById("enhance-btn");
-const providerSelect = document.getElementById("provider");
-const modeSelect = document.getElementById("mode");
-const promptVersionSelect = document.getElementById("prompt-version");
 const sidebar = document.getElementById("sidebar");
-const sidebarToggle = document.getElementById("sidebar-toggle");
+const sidebarToggleDesktop = document.getElementById("sidebar-toggle-desktop");
+const sidebarToggleMobile = document.getElementById("sidebar-toggle-mobile");
 const newChatBtn = document.getElementById("new-chat-btn");
 const conversationList = document.getElementById("conversation-list");
 const sidebarEmpty = document.getElementById("sidebar-empty");
+const themeToggle = document.getElementById("theme-toggle");
+const themeIcon = document.getElementById("theme-icon");
 
-let isProcessing = false;
-let currentConversationId = null;
-let conversations = [];
+// Gate elements
+const gateOverlay = document.getElementById("gate-overlay");
+const gateForm = document.getElementById("gate-form");
+const gateName = document.getElementById("gate-name");
+const gateEmail = document.getElementById("gate-email");
+const gateError = document.getElementById("gate-error");
+const gateSubmit = document.getElementById("gate-submit");
+const messageCounter = document.getElementById("message-counter");
+const counterText = document.getElementById("counter-text");
+
+// State
+let state = {
+    provider: "gemini",
+    mode: "general",
+    prompt_version: 0,
+    isProcessing: false,
+    currentConversationId: null,
+    conversations: [],
+    theme: localStorage.getItem("theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+};
+
+let currentUser = null;
+let providerAvailability = { gemini: true, openai: true, anthropic: true };
+
+// --- Fingerprint ---
+function getFingerprint() {
+    let fp = localStorage.getItem("browser_fingerprint");
+    if (!fp) {
+        fp = crypto.randomUUID();
+        localStorage.setItem("browser_fingerprint", fp);
+    }
+    return fp;
+}
+
+// --- Init Theme ---
+applyTheme(state.theme);
+
+function applyTheme(theme) {
+    if (theme === "dark") {
+        document.documentElement.classList.add("dark");
+        themeIcon.textContent = "light_mode";
+    } else {
+        document.documentElement.classList.remove("dark");
+        themeIcon.textContent = "dark_mode";
+    }
+}
 
 // --- Event Listeners ---
+
+themeToggle?.addEventListener("click", () => {
+    state.theme = state.theme === "dark" ? "light" : "dark";
+    localStorage.setItem("theme", state.theme);
+    applyTheme(state.theme);
+});
+
+// Button Group Toggles
+document.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-group]");
+    if (btn) {
+        const group = btn.dataset.group;
+        const value = btn.dataset.value;
+
+        if (group === "provider" && !providerAvailability[value]) {
+            addSystemNote(`${value.charAt(0).toUpperCase() + value.slice(1)} API key is not configured.`);
+            return;
+        }
+
+        if (group === "prompt-version") {
+            state.prompt_version = parseInt(value);
+        } else {
+            state[group] = value;
+        }
+
+        document.querySelectorAll(`button[data-group='${group}']`).forEach(b => {
+            updateButtonVisuals(b, group, b.dataset.value === value);
+        });
+    }
+});
+
+function updateButtonVisuals(btn, group, isActive) {
+    if (group === "provider") {
+        if (isActive) {
+            btn.className = "provider-btn active flex-shrink-0 px-3 py-1.5 rounded-full bg-primary border border-primary/30 flex items-center gap-2 transition-all hover:brightness-110 active:scale-95 shadow-md shadow-primary/15";
+            btn.querySelector("span:last-child").className = "text-[11px] font-semibold text-white";
+        } else {
+            btn.className = "provider-btn flex-shrink-0 px-3 py-1.5 rounded-full bg-primary-soft dark:bg-white/[0.06] border border-primary/15 dark:border-white/[0.08] flex items-center gap-2 transition-all hover:bg-primary/15 dark:hover:bg-white/[0.1] active:scale-95";
+            btn.querySelector("span:last-child").className = "text-[11px] font-semibold text-muted-light dark:text-muted-dark";
+        }
+    } else {
+        if (isActive) {
+            btn.className = "bg-white dark:bg-primary/25 text-primary dark:text-primary-light text-[10px] font-bold py-1.5 rounded-md transition-all shadow-sm dark:shadow-none";
+        } else {
+            btn.className = "text-muted-light dark:text-muted-dark hover:text-primary dark:hover:text-primary-light text-[10px] font-medium py-1.5 rounded-md transition-all";
+        }
+    }
+}
 
 sendBtn.addEventListener("click", handleSend);
 enhanceBtn.addEventListener("click", handleEnhance);
 newChatBtn.addEventListener("click", startNewChat);
-sidebarToggle.addEventListener("click", () => sidebar.classList.toggle("collapsed"));
+
+sidebarToggleDesktop?.addEventListener("click", toggleSidebar);
+sidebarToggleMobile?.addEventListener("click", toggleSidebar);
+
+function toggleSidebar() {
+    sidebar.classList.toggle("-ml-72");
+    sidebar.classList.toggle("hidden");
+    sidebar.classList.toggle("md:flex");
+}
+
+userInput.addEventListener("input", function () {
+    this.style.height = "auto";
+    this.style.height = this.scrollHeight + "px";
+});
 
 userInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -29,32 +133,142 @@ userInput.addEventListener("keydown", (e) => {
     }
 });
 
-// --- Init ---
+// --- Gate Logic ---
 
-loadConversations();
+gateForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = gateName.value.trim();
+    const email = gateEmail.value.trim();
+    const fingerprint = getFingerprint();
+
+    if (!name || !email) return;
+
+    gateSubmit.disabled = true;
+    gateSubmit.textContent = "Entering...";
+    gateError.classList.add("hidden");
+
+    try {
+        currentUser = await callAPI("/auth/register", {
+            method: "POST",
+            body: { name, email, fingerprint },
+        });
+        localStorage.setItem("user_name", currentUser.name);
+        localStorage.setItem("user_email", currentUser.email);
+        showPlayground();
+        updateMessageCounter();
+    } catch (err) {
+        gateError.textContent = err.message || "Registration failed. Try again.";
+        gateError.classList.remove("hidden");
+        gateSubmit.disabled = false;
+        gateSubmit.textContent = "Enter Playground";
+    }
+});
+
+function showGate() {
+    gateOverlay.style.display = "flex";
+    gateOverlay.style.opacity = "1";
+    gateOverlay.classList.remove("hidden");
+}
+
+function showPlayground() {
+    gateOverlay.style.opacity = "0";
+    setTimeout(() => {
+        gateOverlay.style.display = "none";
+        gateOverlay.classList.add("hidden");
+    }, 500);
+}
+
+function updateMessageCounter() {
+    if (!currentUser) return;
+
+    if (currentUser.is_admin) {
+        messageCounter.classList.add("hidden");
+        messageCounter.style.display = "none";
+        updateUserDisplay(currentUser.name, "Unlimited");
+    } else {
+        const remaining = currentUser.messages_remaining;
+        messageCounter.classList.remove("hidden");
+        messageCounter.style.display = "flex";
+        counterText.textContent = `${remaining} left`;
+        counterText.classList.remove("!text-red-500");
+        if (remaining <= 2) {
+            counterText.classList.add("!text-red-500");
+        }
+        updateUserDisplay(currentUser.name, `${remaining} messages left`);
+    }
+}
+
+function updateUserDisplay(name, plan) {
+    const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+    const sidebarEl = document.getElementById("sidebar");
+    if (!sidebarEl) return;
+    const userCircle = sidebarEl.querySelector(".rounded-full.bg-gradient-to-tr");
+    const userName = sidebarEl.querySelector(".truncate");
+    const userPlan = sidebarEl.querySelector(".text-primary.font-medium.text-\\[10px\\]");
+    if (userCircle) userCircle.textContent = initials;
+    if (userName) userName.textContent = name;
+    if (userPlan) userPlan.textContent = plan;
+}
+
+// --- Init ---
+initApp();
+
+async function initApp() {
+    const fingerprint = getFingerprint();
+
+    try {
+        currentUser = await callAPI("/auth/me", { params: { fingerprint } });
+        showPlayground();
+        updateMessageCounter();
+    } catch {
+        showGate();
+    }
+
+    loadProviderStatus();
+    loadConversations();
+}
+
+async function loadProviderStatus() {
+    try {
+        providerAvailability = await callAPI("/providers/status");
+        document.querySelectorAll("button[data-group='provider']").forEach(btn => {
+            const provider = btn.dataset.value;
+            const dot = btn.querySelector("div");
+            if (!providerAvailability[provider]) {
+                dot.className = "w-1.5 h-1.5 rounded-full dot-unavailable";
+            }
+        });
+    } catch (err) {
+        console.warn("Failed to load provider status:", err);
+    }
+}
 
 // --- Handlers ---
 
 async function handleSend() {
     const text = userInput.value.trim();
-    if (!text || isProcessing) return;
+    if (!text || state.isProcessing) return;
 
-    const mode = modeSelect.value;
-    const provider = providerSelect.value;
-    const promptVersion = parseInt(promptVersionSelect.value);
+    if (currentUser && !currentUser.is_admin && currentUser.messages_remaining <= 0) {
+        clearWelcome();
+        addSystemNote("Message limit reached. Contact admin for unlimited access.");
+        return;
+    }
+
+    userInput.style.height = "auto";
+
+    const { mode, provider, prompt_version } = state;
 
     clearWelcome();
     addMessage("user", text);
     userInput.value = "";
     setProcessing(true);
 
-    // Determine endpoint type
     let endpoint = "chat";
-    if (mode === "summarize" && promptVersion > 0) endpoint = "summarize";
-    else if (mode === "sentiment" && promptVersion > 0) endpoint = "sentiment";
+    if (mode === "summarize" && prompt_version > 0) endpoint = "summarize";
+    else if (mode === "sentiment" && prompt_version > 0) endpoint = "sentiment";
 
-    // Create conversation if needed
-    if (!currentConversationId) {
+    if (!state.currentConversationId) {
         try {
             const convo = await callAPI("/api/conversations", {
                 method: "POST",
@@ -63,19 +277,18 @@ async function handleSend() {
                     endpoint,
                     mode,
                     provider,
-                    prompt_version: promptVersion > 0 ? promptVersion : null,
+                    prompt_version: prompt_version > 0 ? prompt_version : null,
                 },
             });
-            currentConversationId = convo.id;
+            state.currentConversationId = convo.id;
             await loadConversations();
         } catch (err) {
-            // Non-fatal — continue without history
             console.warn("Failed to create conversation:", err);
         }
     }
 
-    const loadingEl = addLoadingMessage(provider);
-    const convParam = currentConversationId ? { conversation_id: currentConversationId } : {};
+    const { loadingEl } = addLoadingMessage(provider);
+    const convParam = state.currentConversationId ? { conversation_id: state.currentConversationId } : {};
 
     try {
         let result;
@@ -84,8 +297,9 @@ async function handleSend() {
             result = await callAPI("/summarize", {
                 method: "POST",
                 body: { text, max_length: 100 },
-                params: { provider, prompt_version: promptVersion, ...convParam },
+                params: { provider, prompt_version, ...convParam },
             });
+            loadingEl.remove();
             addMessage("assistant", result.summary, {
                 provider: result.provider,
                 meta: `Prompt v${result.prompt_version}`,
@@ -94,12 +308,13 @@ async function handleSend() {
             result = await callAPI("/analyze-sentiment", {
                 method: "POST",
                 body: { text },
-                params: { provider, prompt_version: promptVersion, ...convParam },
+                params: { provider, prompt_version, ...convParam },
             });
             const formatted =
-                `Sentiment: ${result.sentiment}\n` +
-                `Confidence: ${(result.confidence * 100).toFixed(1)}%\n` +
-                `Explanation: ${result.explanation}`;
+                `**Sentiment:** ${result.sentiment}\n` +
+                `**Confidence:** ${(result.confidence * 100).toFixed(1)}%\n` +
+                `**Explanation:** ${result.explanation}`;
+            loadingEl.remove();
             addMessage("assistant", formatted, {
                 provider: result.provider,
                 meta: `Prompt v${result.prompt_version}`,
@@ -110,27 +325,47 @@ async function handleSend() {
                 body: { message: text, provider, mode },
                 params: convParam,
             });
-            addMessage("assistant", result.response, {
-                provider: result.provider,
-            });
+            loadingEl.remove();
+            addMessage("assistant", result.response, { provider: result.provider });
+        }
+
+        // Decrement counter after successful send
+        if (currentUser && !currentUser.is_admin) {
+            currentUser.message_count += 1;
+            currentUser.messages_remaining = Math.max(0, currentUser.messages_remaining - 1);
+            updateMessageCounter();
         }
     } catch (err) {
-        addMessage("assistant", `Error: ${err.message}`, { isError: true });
-    } finally {
         loadingEl.remove();
+        if (err.message.includes("Message limit reached")) {
+            addSystemNote("You've used all your free messages. Contact admin for unlimited access.");
+            if (currentUser) {
+                currentUser.messages_remaining = 0;
+                updateMessageCounter();
+            }
+        } else {
+            addMessage("assistant", `Error: ${err.message}`, { isError: true });
+        }
+    } finally {
         setProcessing(false);
     }
 }
 
 async function handleEnhance() {
     const text = userInput.value.trim();
-    if (!text || isProcessing) return;
+    if (!text || state.isProcessing) return;
+
+    if (currentUser && !currentUser.is_admin && currentUser.messages_remaining <= 0) {
+        addSystemNote("Message limit reached. Contact admin for unlimited access.");
+        return;
+    }
 
     setProcessing(true);
-    enhanceBtn.innerHTML = '<span class="enhance-icon">&#9889;</span> Enhancing<span class="loading-dots"></span>';
+    const originalBtnContent = enhanceBtn.innerHTML;
+    enhanceBtn.innerHTML = '<span class="material-icons-round text-xs animate-spin">refresh</span> Enhancing...';
 
     try {
-        const params = currentConversationId ? { conversation_id: currentConversationId } : {};
+        const params = state.currentConversationId ? { conversation_id: state.currentConversationId } : {};
         const result = await callAPI("/enhance-prompt", {
             method: "POST",
             body: { prompt: text },
@@ -139,17 +374,30 @@ async function handleEnhance() {
 
         userInput.value = result.enhanced_prompt;
         userInput.focus();
+        userInput.dispatchEvent(new Event("input"));
 
         if (result.techniques_applied.length > 0) {
             clearWelcome();
-            addSystemNote(
-                `Prompt enhanced using: ${result.techniques_applied.join(", ")}`
-            );
+            addSystemNote(`Prompt enhanced using: ${result.techniques_applied.join(", ")}`);
+        }
+
+        if (currentUser && !currentUser.is_admin) {
+            currentUser.message_count += 1;
+            currentUser.messages_remaining = Math.max(0, currentUser.messages_remaining - 1);
+            updateMessageCounter();
         }
     } catch (err) {
-        addSystemNote(`Enhancement failed: ${err.message}`);
+        if (err.message.includes("Message limit reached")) {
+            addSystemNote("You've used all your free messages. Contact admin for unlimited access.");
+            if (currentUser) {
+                currentUser.messages_remaining = 0;
+                updateMessageCounter();
+            }
+        } else {
+            addSystemNote(`Enhancement failed: ${err.message}`);
+        }
     } finally {
-        enhanceBtn.innerHTML = '<span class="enhance-icon">&#9889;</span> Enhance';
+        enhanceBtn.innerHTML = originalBtnContent;
         setProcessing(false);
     }
 }
@@ -157,13 +405,19 @@ async function handleEnhance() {
 // --- Conversation Management ---
 
 function startNewChat() {
-    currentConversationId = null;
+    state.currentConversationId = null;
     chatContainer.innerHTML = `
-        <div class="welcome-message">
-            <p>Choose a model and mode above, then start chatting.</p>
-            <p>In <strong>Summarize</strong> mode, paste text to get a summary.<br>
-               In <strong>Sentiment</strong> mode, paste text for sentiment analysis.<br>
-               In <strong>General</strong> mode, just chat freely.</p>
+        <div class="welcome-message text-center py-12 px-4">
+            <div class="w-16 h-16 bg-primary-soft dark:bg-primary/15 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-primary/10 dark:shadow-primary/20">
+                <span class="material-icons-round text-3xl text-primary">auto_awesome</span>
+            </div>
+            <h2 class="text-xl font-bold text-text-light dark:text-text-dark mb-2">Welcome to LLM Playground</h2>
+            <p class="text-muted-light dark:text-muted-dark text-sm max-w-md mx-auto leading-relaxed">
+                Choose a model and mode above to get started.
+                <br>Explore <strong class="text-text-light dark:text-text-dark">Summarization</strong>,
+                <strong class="text-text-light dark:text-text-dark">Sentiment Analysis</strong>, or just
+                <strong class="text-text-light dark:text-text-dark">Chat</strong>.
+            </p>
         </div>`;
     highlightActive();
     userInput.focus();
@@ -171,7 +425,7 @@ function startNewChat() {
 
 async function loadConversations() {
     try {
-        conversations = await callAPI("/api/conversations");
+        state.conversations = await callAPI("/api/conversations");
         renderSidebar();
     } catch (err) {
         console.warn("Failed to load conversations:", err);
@@ -181,35 +435,78 @@ async function loadConversations() {
 async function loadConversation(id) {
     try {
         const convo = await callAPI(`/api/conversations/${id}`);
-        currentConversationId = convo.id;
+        state.currentConversationId = convo.id;
+        state.provider = convo.provider || "gemini";
+        state.mode = convo.mode || "general";
+        state.prompt_version = convo.prompt_version || 0;
 
-        // Set controls to match conversation settings
-        if (convo.provider) providerSelect.value = convo.provider;
-        if (convo.mode) modeSelect.value = convo.mode;
-        if (convo.prompt_version) promptVersionSelect.value = String(convo.prompt_version);
+        syncStateToUI();
 
-        // Render messages
         chatContainer.innerHTML = "";
         for (const msg of convo.messages) {
             if (msg.role === "user") {
                 addMessage("user", msg.content);
             } else if (msg.role === "assistant") {
-                addMessage("assistant", msg.content, { provider: convo.provider });
+                addMessage("assistant", msg.content, { provider: convo.provider, meta: msg.meta });
             }
         }
 
-        if (convo.messages.length === 0) {
-            chatContainer.innerHTML = `<div class="welcome-message"><p>This conversation is empty. Send a message to get started.</p></div>`;
-        }
-
+        if (convo.messages.length === 0) startNewChat();
         highlightActive();
 
-        // Collapse sidebar on mobile
-        if (window.innerWidth <= 768) {
-            sidebar.classList.add("collapsed");
-        }
+        if (window.innerWidth < 768) sidebar.classList.add("hidden");
     } catch (err) {
         addSystemNote(`Failed to load conversation: ${err.message}`);
+    }
+}
+
+function syncStateToUI() {
+    document.querySelectorAll("button[data-group='provider']").forEach(btn => {
+        updateButtonVisuals(btn, "provider", btn.dataset.value === state.provider);
+    });
+    document.querySelectorAll("button[data-group='mode']").forEach(btn => {
+        updateButtonVisuals(btn, "mode", btn.dataset.value === state.mode);
+    });
+    document.querySelectorAll("button[data-group='prompt-version']").forEach(btn => {
+        updateButtonVisuals(btn, "prompt-version", parseInt(btn.dataset.value) === state.prompt_version);
+    });
+}
+
+function renderSidebar() {
+    conversationList.querySelectorAll(".conversation-item").forEach(el => el.remove());
+
+    if (state.conversations.length === 0) {
+        sidebarEmpty.style.display = "block";
+        return;
+    }
+    sidebarEmpty.style.display = "none";
+
+    for (const convo of state.conversations) {
+        const div = document.createElement("div");
+        const isActive = convo.id === state.currentConversationId;
+        div.className = `conversation-item p-3 rounded-lg group cursor-pointer transition-colors mb-1 ${isActive ? "bg-primary-soft dark:bg-primary/10 border border-primary/20" : "hover:bg-primary-soft/50 dark:hover:bg-white/5 border border-transparent"}`;
+        div.onclick = () => loadConversation(convo.id);
+
+        const badgeColor = convo.endpoint === "chat" ? "text-primary"
+            : convo.endpoint === "summarize" ? "text-emerald-500 dark:text-green-400"
+            : convo.endpoint === "sentiment" ? "text-amber-500 dark:text-orange-400"
+            : "text-muted-light dark:text-muted-dark";
+
+        div.innerHTML = `
+            <div class="flex items-center justify-between">
+                <p class="text-xs font-medium truncate flex-1 ${isActive ? "text-primary dark:text-white" : "text-muted-light dark:text-muted-dark group-hover:text-text-light dark:group-hover:text-text-dark"}">${escapeHtml(convo.title)}</p>
+                <button class="delete-btn opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 dark:hover:text-red-400 transition-opacity text-muted-light dark:text-muted-dark" title="Delete">
+                    <span class="material-icons-round text-xs">close</span>
+                </button>
+            </div>
+            <div class="flex items-center gap-2 mt-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider ${badgeColor}">${convo.endpoint}</span>
+                <span class="text-[10px] text-muted-light dark:text-muted-dark">${timeAgo(convo.updated_at)}</span>
+            </div>
+        `;
+
+        div.querySelector(".delete-btn").onclick = (e) => deleteConversation(convo.id, e);
+        conversationList.appendChild(div);
     }
 }
 
@@ -219,61 +516,160 @@ async function deleteConversation(id, e) {
 
     try {
         await callAPI(`/api/conversations/${id}`, { method: "DELETE" });
-        if (currentConversationId === id) {
-            startNewChat();
-        }
+        if (state.currentConversationId === id) startNewChat();
         await loadConversations();
     } catch (err) {
         console.warn("Failed to delete conversation:", err);
     }
 }
 
-function renderSidebar() {
-    // Clear existing items but keep the empty state element
-    const items = conversationList.querySelectorAll(".conversation-item");
-    items.forEach((el) => el.remove());
-
-    if (conversations.length === 0) {
-        sidebarEmpty.style.display = "block";
-        return;
-    }
-
-    sidebarEmpty.style.display = "none";
-
-    for (const convo of conversations) {
-        const el = document.createElement("div");
-        el.className = `conversation-item${convo.id === currentConversationId ? " active" : ""}`;
-        el.onclick = () => loadConversation(convo.id);
-
-        const badgeClass = convo.endpoint === "chat" ? "chat"
-            : convo.endpoint === "summarize" ? "summarize"
-            : convo.endpoint === "sentiment" ? "sentiment"
-            : "";
-
-        el.innerHTML = `
-            <div class="convo-title">${escapeHtml(convo.title)}</div>
-            <div class="convo-meta">
-                <span class="endpoint-badge ${badgeClass}">${convo.endpoint}</span>
-                <span class="convo-time">${timeAgo(convo.updated_at)}</span>
-            </div>
-            <button class="convo-delete" title="Delete">&times;</button>
-        `;
-
-        el.querySelector(".convo-delete").onclick = (e) => deleteConversation(convo.id, e);
-        conversationList.appendChild(el);
-    }
-}
-
 function highlightActive() {
-    conversationList.querySelectorAll(".conversation-item").forEach((el, i) => {
-        el.classList.toggle("active", conversations[i] && conversations[i].id === currentConversationId);
-    });
+    renderSidebar();
 }
 
-// --- API ---
+// --- UI Helpers ---
+
+function clearWelcome() {
+    const welcome = chatContainer.querySelector(".welcome-message");
+    if (welcome) welcome.remove();
+}
+
+function addMessage(role, text, options = {}) {
+    const { provider, meta, isError } = options;
+    const msg = document.createElement("div");
+    msg.className = "animate-fade-in";
+
+    if (role === "user") {
+        msg.innerHTML = `
+            <div class="flex justify-end ml-12 mb-6">
+                <div class="user-bubble text-white rounded-2xl rounded-tr-none px-4 py-3 shadow-lg shadow-primary/20 max-w-full break-words">
+                    <p class="text-sm leading-relaxed whitespace-pre-wrap">${escapeHtml(text)}</p>
+                </div>
+            </div>`;
+    } else {
+        let metaHtml = "";
+        if (meta) {
+            metaHtml = `
+            <div class="flex items-center gap-2 mb-2">
+                <div class="bg-primary-soft dark:bg-primary/20 text-primary px-2 py-0.5 rounded text-[9px] font-bold tracking-wider flex items-center gap-1 uppercase">
+                    <span class="material-icons-round text-[10px]">auto_awesome</span>
+                    ${typeof meta === "string" ? meta : "Analysis Result"}
+                </div>
+            </div>`;
+        }
+
+        msg.innerHTML = `
+            <div class="mr-12 mb-6">
+                <div class="assistant-bubble-light rounded-2xl rounded-tl-none p-4 relative overflow-hidden">
+                    ${metaHtml}
+                    <div class="text-sm text-text-light dark:text-text-dark leading-relaxed space-y-2 whitespace-pre-wrap">${formatContent(text)}</div>
+                    <div class="flex items-center gap-4 border-t border-border-light dark:border-border-dark pt-3 mt-4">
+                        <div class="flex items-center gap-1 text-[10px] text-muted-light dark:text-muted-dark" title="Provider">
+                            <span class="material-icons-round text-xs">vpn_key</span>
+                            ${provider || "AI"}
+                        </div>
+                        <div class="ml-auto flex gap-2">
+                            <span class="material-icons-round text-muted-light dark:text-muted-dark text-xs hover:text-primary cursor-pointer transition-colors copy-btn" title="Copy">content_copy</span>
+                            <span class="material-icons-round text-muted-light dark:text-muted-dark text-xs hover:text-primary cursor-pointer transition-colors" title="Like">thumb_up</span>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        if (isError) {
+            msg.querySelector(".assistant-bubble-light").style.borderColor = "rgba(239, 68, 68, 0.3)";
+            msg.querySelector(".text-text-light").classList.add("!text-red-500", "dark:!text-red-400");
+        }
+
+        // Copy button handler
+        const copyBtn = msg.querySelector(".copy-btn");
+        if (copyBtn) {
+            copyBtn.addEventListener("click", () => {
+                navigator.clipboard.writeText(text).then(() => {
+                    copyBtn.textContent = "check";
+                    setTimeout(() => { copyBtn.textContent = "content_copy"; }, 1500);
+                });
+            });
+        }
+    }
+
+    chatContainer.appendChild(msg);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    return msg;
+}
+
+function addLoadingMessage(provider) {
+    const msg = document.createElement("div");
+    msg.className = "mr-12 mb-6 animate-fade-in";
+    msg.innerHTML = `
+        <div class="assistant-bubble-light rounded-2xl rounded-tl-none p-4 flex items-center gap-3 w-fit">
+            <div class="flex gap-1.5">
+                <div class="w-2 h-2 rounded-full bg-primary animate-bounce" style="animation-delay: 0ms"></div>
+                <div class="w-2 h-2 rounded-full bg-primary-light animate-bounce" style="animation-delay: 150ms"></div>
+                <div class="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style="animation-delay: 300ms"></div>
+            </div>
+            <span class="text-xs text-muted-light dark:text-muted-dark">${provider || "Thinking"}...</span>
+        </div>`;
+    chatContainer.appendChild(msg);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    return { loadingEl: msg };
+}
+
+function addSystemNote(text) {
+    const msg = document.createElement("div");
+    msg.className = "flex justify-center mb-4 opacity-80";
+    msg.innerHTML = `
+        <div class="bg-primary-soft dark:bg-primary/10 border border-primary/15 dark:border-primary/20 px-3 py-1 rounded-full flex items-center gap-2">
+            <span class="material-icons-round text-primary text-xs">info</span>
+            <span class="text-xs text-primary font-medium">${text}</span>
+        </div>`;
+    chatContainer.appendChild(msg);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function setProcessing(isProc) {
+    state.isProcessing = isProc;
+    sendBtn.disabled = isProc;
+    sendBtn.classList.toggle("opacity-50", isProc);
+    sendBtn.classList.toggle("cursor-not-allowed", isProc);
+    enhanceBtn.disabled = isProc;
+    enhanceBtn.classList.toggle("opacity-50", isProc);
+}
+
+function formatContent(text) {
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-text-light dark:text-text-dark font-semibold">$1</strong>')
+        .replace(/```([\s\S]*?)```/g, '<div class="bg-gray-100 dark:bg-black/30 text-text-light dark:text-text-dark p-3 rounded-lg my-2 font-mono text-xs overflow-x-auto border border-border-light dark:border-border-dark">$1</div>');
+}
+
+// --- Utilities ---
+
+function escapeHtml(str) {
+    if (!str) return "";
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function timeAgo(dateStr) {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const seconds = Math.floor((now - date) / 1000);
+    if (seconds < 60) return "just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return date.toLocaleDateString();
+}
 
 async function callAPI(path, { method = "GET", body = null, params = {} } = {}) {
     const url = new URL(path, window.location.origin);
+
+    // Auto-attach fingerprint to LLM and conversation endpoints
+    if (!path.startsWith("/auth/") && !path.startsWith("/health") && !path.startsWith("/providers/")) {
+        const fp = getFingerprint();
+        if (fp && !params.fingerprint) params.fingerprint = fp;
+    }
+
     for (const [k, v] of Object.entries(params)) {
         if (v !== undefined && v !== null) url.searchParams.set(k, v);
     }
@@ -285,7 +681,6 @@ async function callAPI(path, { method = "GET", body = null, params = {} } = {}) 
     }
 
     const res = await fetch(url, options);
-
     if (res.status === 204) return null;
 
     if (!res.ok) {
@@ -293,110 +688,4 @@ async function callAPI(path, { method = "GET", body = null, params = {} } = {}) 
         throw new Error(errData.detail || `HTTP ${res.status}`);
     }
     return res.json();
-}
-
-// --- DOM Helpers ---
-
-function clearWelcome() {
-    const welcome = chatContainer.querySelector(".welcome-message");
-    if (welcome) welcome.remove();
-}
-
-function addMessage(role, text, options = {}) {
-    const { provider, meta, isError, enhanced, techniques } = options;
-
-    const msg = document.createElement("div");
-    msg.className = `message ${role}`;
-
-    const label = document.createElement("div");
-    label.className = "message-label";
-    label.textContent = role === "user" ? "You" : provider || "Assistant";
-    if (enhanced) {
-        label.innerHTML += ' <span class="enhanced-badge">Enhanced</span>';
-    }
-
-    const bubble = document.createElement("div");
-    bubble.className = "message-bubble";
-    bubble.textContent = text;
-    if (isError) bubble.style.color = "var(--error)";
-
-    msg.appendChild(label);
-    msg.appendChild(bubble);
-
-    if (meta) {
-        const metaEl = document.createElement("div");
-        metaEl.className = "message-meta";
-        metaEl.textContent = meta;
-        msg.appendChild(metaEl);
-    }
-
-    if (techniques && techniques.length > 0) {
-        const techEl = document.createElement("div");
-        techEl.className = "techniques-list";
-        techEl.textContent = `Techniques: ${techniques.join(", ")}`;
-        msg.appendChild(techEl);
-    }
-
-    chatContainer.appendChild(msg);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    return msg;
-}
-
-function addLoadingMessage(provider) {
-    const msg = document.createElement("div");
-    msg.className = "message assistant";
-
-    const label = document.createElement("div");
-    label.className = "message-label";
-    label.textContent = provider || "Assistant";
-
-    const bubble = document.createElement("div");
-    bubble.className = "message-bubble";
-    bubble.innerHTML = 'Thinking<span class="loading-dots"></span>';
-
-    msg.appendChild(label);
-    msg.appendChild(bubble);
-    chatContainer.appendChild(msg);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    return msg;
-}
-
-function addSystemNote(text) {
-    const note = document.createElement("div");
-    note.className = "message assistant";
-    const bubble = document.createElement("div");
-    bubble.className = "message-bubble";
-    bubble.style.fontSize = "0.8rem";
-    bubble.style.color = "var(--enhance)";
-    bubble.style.borderColor = "rgba(245, 158, 11, 0.3)";
-    bubble.textContent = text;
-    note.appendChild(bubble);
-    chatContainer.appendChild(note);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-}
-
-function setProcessing(state) {
-    isProcessing = state;
-    sendBtn.disabled = state;
-    enhanceBtn.disabled = state;
-}
-
-// --- Utilities ---
-
-function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str;
-    return div.innerHTML;
-}
-
-function timeAgo(dateStr) {
-    const now = new Date();
-    const date = new Date(dateStr);
-    const seconds = Math.floor((now - date) / 1000);
-
-    if (seconds < 60) return "just now";
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-    return date.toLocaleDateString();
 }

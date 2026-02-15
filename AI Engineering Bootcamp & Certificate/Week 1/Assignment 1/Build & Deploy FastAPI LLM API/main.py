@@ -22,9 +22,10 @@ from prompts import (
     SENTIMENT_PROMPTS, DEFAULT_SENTIMENT_PROMPT,
     CHAT_SYSTEM_PROMPTS, ENHANCE_PROMPT_SYSTEM,
 )
-from config import DEFAULT_PROVIDER
-from models import init_db, get_db, Conversation, Message
+from config import DEFAULT_PROVIDER, ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY, MESSAGE_LIMIT
+from models import init_db, get_db, Conversation, Message, User
 from history import router as history_router
+from auth import router as auth_router
 
 DESCRIPTION = """
 ## AI-Powered Text Analysis API
@@ -85,6 +86,7 @@ app = FastAPI(
 )
 
 app.include_router(history_router)
+app.include_router(auth_router)
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -106,6 +108,38 @@ def _save_messages(db: Session, conversation_id: UUID | None, user_content: str,
     db.add(Message(conversation_id=convo.id, role="assistant", content=assistant_content, meta=meta))
     convo.updated_at = datetime.now(timezone.utc)
     db.commit()
+
+
+def require_user_with_quota(
+    fingerprint: str = Query(description="Browser fingerprint UUID"),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.fingerprint == fingerprint).first()
+    if not user:
+        raise HTTPException(403, "Not registered. Please complete the access gate.")
+    if not user.is_admin and user.message_count >= MESSAGE_LIMIT:
+        raise HTTPException(429, f"Message limit reached ({MESSAGE_LIMIT} messages). Contact admin for unlimited access.")
+    return user, db
+
+
+def _increment_message_count(user, db: Session):
+    if not user.is_admin:
+        user.message_count += 1
+        db.commit()
+
+
+@app.get(
+    "/providers/status",
+    tags=["Health"],
+    summary="Provider Availability",
+    description="Returns which LLM providers have API keys configured.",
+)
+def providers_status():
+    return {
+        "gemini": bool(GOOGLE_API_KEY),
+        "openai": bool(OPENAI_API_KEY),
+        "anthropic": bool(ANTHROPIC_API_KEY),
+    }
 
 
 # --- API Endpoints (assignment requirement) ---
@@ -149,8 +183,9 @@ def summarize(
     provider: str = Query(default=None, description="LLM provider to use (gemini, openai, anthropic)"),
     prompt_version: int = Query(default=None, description="Prompt template version (1, 2, or 3)"),
     conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
-    db: Session = Depends(get_db),
+    user_quota: tuple = Depends(require_user_with_quota),
 ):
+    user, db = user_quota
     provider_name = provider or DEFAULT_PROVIDER
     version = prompt_version or DEFAULT_SUMMARIZE_PROMPT
 
@@ -170,6 +205,7 @@ def summarize(
 
     summary_text = summary.strip()
     _save_messages(db, conversation_id, request.text, summary_text)
+    _increment_message_count(user, db)
 
     return SummarizeResponse(
         summary=summary_text,
@@ -205,8 +241,9 @@ def analyze_sentiment(
     provider: str = Query(default=None, description="LLM provider to use (gemini, openai, anthropic)"),
     prompt_version: int = Query(default=None, description="Prompt template version (1, 2, or 3)"),
     conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
-    db: Session = Depends(get_db),
+    user_quota: tuple = Depends(require_user_with_quota),
 ):
+    user, db = user_quota
     provider_name = provider or DEFAULT_PROVIDER
     version = prompt_version or DEFAULT_SENTIMENT_PROMPT
 
@@ -228,6 +265,7 @@ def analyze_sentiment(
 
     display = f"Sentiment: {parsed['sentiment']}\nConfidence: {parsed['confidence']}\nExplanation: {parsed['explanation']}"
     _save_messages(db, conversation_id, request.text, display, meta=parsed)
+    _increment_message_count(user, db)
 
     return SentimentResponse(
         sentiment=parsed["sentiment"],
@@ -256,8 +294,9 @@ def analyze_sentiment(
 def chat(
     request: ChatRequest,
     conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
-    db: Session = Depends(get_db),
+    user_quota: tuple = Depends(require_user_with_quota),
 ):
+    user, db = user_quota
     system_prompt = CHAT_SYSTEM_PROMPTS.get(request.mode, CHAT_SYSTEM_PROMPTS["general"])
     llm = get_provider(request.provider)
 
@@ -270,6 +309,7 @@ def chat(
 
     response_text = response.strip()
     _save_messages(db, conversation_id, request.message, response_text)
+    _increment_message_count(user, db)
 
     return ChatResponse(response=response_text, provider=request.provider)
 
@@ -287,8 +327,9 @@ Applies relevant techniques such as role prompting, specificity, chain-of-though
 def enhance_prompt(
     request: EnhanceRequest,
     conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
-    db: Session = Depends(get_db),
+    user_quota: tuple = Depends(require_user_with_quota),
 ):
+    user, db = user_quota
     provider_name = DEFAULT_PROVIDER
     llm = get_provider(provider_name)
 
@@ -313,6 +354,7 @@ def enhance_prompt(
         techniques = ["raw_enhancement"]
 
     _save_messages(db, conversation_id, request.prompt, enhanced, meta={"techniques_applied": techniques})
+    _increment_message_count(user, db)
 
     return EnhanceResponse(
         enhanced_prompt=enhanced,

@@ -159,3 +159,24 @@ class ConversationDetail(BaseModel):
 
 class ConversationUpdateRequest(BaseModel):
     title: Optional[str] = None
+
+
+# --- Auth / Gate Schemas ---
+
+class UserRegisterRequest(BaseModel):
+    name: str = Field(description="User's display name", min_length=1, max_length=255)
+    email: str = Field(description="User's email address", min_length=3, max_length=255)
+    fingerprint: str = Field(description="Browser-generated UUID fingerprint", min_length=36, max_length=36)
+
+
+class UserResponse(BaseModel):
+    id: UUID
+    name: str
+    email: str
+    fingerprint: str
+    message_count: int
+    is_admin: bool
+    messages_remaining: Optional[int] = Field(description="Messages remaining (None for admin)")
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
