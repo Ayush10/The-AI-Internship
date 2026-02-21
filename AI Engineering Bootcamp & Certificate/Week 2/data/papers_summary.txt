@@ -1,0 +1,35 @@
+Reinforcement Learning Research Papers - Summary Index
+
+This collection contains 10 research papers covering key topics in reinforcement learning:
+
+1. Deep Recurrent Q-Learning for Partially Observable MDPs (Hausknecht & Stone, 2015)
+   - Combines LSTM with DQN to handle partial observability in Atari games.
+
+2. General Value Function Networks (Schlegel et al., 2021)
+   - Proposes architectures for learning predictive knowledge using GVFs.
+
+3. Recurrent Model-Free RL Can Be a Strong Baseline for Many POMDPs (Ni et al., 2021)
+   - Shows that simple recurrent model-free methods match or beat specialized POMDP algorithms.
+
+4. Recurrent Experience Replay in Distributed Reinforcement Learning (Kapturowski et al., 2019)
+   - Introduces R2D2 agent with burn-in strategy for training recurrent RL agents at scale.
+
+5. Stabilizing Transformers for Reinforcement Learning (Parisotto et al., 2020)
+   - Proposes Gated Transformer-XL (GTrXL) architecture for stable RL training.
+
+6. Reward Machines: Exploiting Reward Function Structure in RL (Icarte et al., 2022)
+   - Introduces reward machines as a formalism for structured reward specification.
+
+7. On Overfitting and Asymptotic Bias in Batch RL with Partial Observability (Francois-Lavet et al., 2019)
+   - Analyzes overfitting and bias issues when training batch RL with limited observations.
+
+8. Constrained Policy Optimization (Achiam et al., 2017)
+   - Proposes CPO algorithm for safe RL with constraint satisfaction guarantees.
+
+9. Benchmarking Batch Deep Reinforcement Learning Algorithms (Fujimoto et al., 2019)
+   - Comprehensive evaluation of off-policy batch deep RL methods.
+
+10. Mastering Diverse Domains through World Models - DreamerV3 (Hafner et al., 2023)
+    - A single RL agent that masters 150+ diverse tasks without domain-specific tuning.
+
+Key themes: POMDPs, batch/offline RL, safe RL, memory architectures, world models, reward shaping.

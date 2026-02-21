@@ -1,0 +1,11 @@
+paper_id,title,authors,year,venue,topic
+1,Deep Recurrent Q-Learning for Partially Observable MDPs,Hausknecht and Stone,2015,AAAI Workshop,POMDP
+2,General Value Function Networks,Schlegel et al.,2021,JAIR,Predictive Knowledge
+3,Recurrent Model-Free RL Can Be a Strong Baseline for Many POMDPs,Ni et al.,2021,NeurIPS,POMDP
+4,Recurrent Experience Replay in Distributed Reinforcement Learning,Kapturowski et al.,2019,ICLR,Distributed RL
+5,Stabilizing Transformers for Reinforcement Learning,Parisotto et al.,2020,ICML,Memory Architecture
+6,Reward Machines: Exploiting Reward Function Structure in RL,Icarte et al.,2022,JAIR,Reward Shaping
+7,On Overfitting and Asymptotic Bias in Batch RL with Partial Observability,Francois-Lavet et al.,2019,JAIR,Batch RL
+8,Constrained Policy Optimization,Achiam et al.,2017,ICML,Safe RL
+9,Benchmarking Batch Deep Reinforcement Learning Algorithms,Fujimoto et al.,2019,arXiv,Batch RL
+10,Mastering Diverse Domains through World Models,Hafner et al.,2023,arXiv,World Models
