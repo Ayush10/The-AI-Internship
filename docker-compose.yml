@@ -10,6 +10,9 @@ services:
         condition: service_healthy
       week2:
         condition: service_healthy
+    networks:
+      - coolify
+      - internal
 
   week1:
     build:
@@ -23,6 +26,9 @@ services:
       - "8001"
     volumes:
       - week1_data:/app/data.db
+    networks:
+      - coolify
+      - internal
 
   week2:
     build:
@@ -38,6 +44,8 @@ services:
         condition: service_started
     volumes:
       - chroma_data:/app/chroma_db
+    networks:
+      - internal
 
   ollama:
     image: ollama/ollama:latest
@@ -55,6 +63,13 @@ services:
       resources:
         limits:
           memory: 16G
+    networks:
+      - internal
+
+networks:
+  coolify:
+    external: true
+  internal:
 
 volumes:
   week1_data:

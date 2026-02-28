@@ -5,5 +5,5 @@ COPY week1/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY week1/ .
 EXPOSE 8001
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:8001/health || exit 1
+HEALTHCHECK --interval=10s --timeout=5s --retries=10 --start-period=30s CMD curl -f http://localhost:8001/health || exit 1
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
