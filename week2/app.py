@@ -48,7 +48,7 @@ def load_bm25_retriever():
 @st.cache_resource
 def get_llm():
     """Initialize the LLM."""
-    return ChatOllama(model="qwen3:8b", temperature=0)
+    return ChatOllama(model="glm-5:cloud", temperature=0)
 
 
 def build_chain(retriever, llm):
@@ -86,7 +86,7 @@ def main():
     st.title("📚 RL Research Papers Q&A")
     st.caption(
         "RAG-powered Q&A over 10 reinforcement learning papers | "
-        "Qwen3 + Qwen3-Embedding + ChromaDB"
+        "GLM-5 + GLM-5-Embedding + ChromaDB"
     )
 
     # Sidebar
@@ -123,8 +123,8 @@ def main():
         **Data:** 10 RL research papers (PDF)
 
         **Models:**
-        - LLM: Qwen3 (cloud via Ollama)
-        - Embeddings: Qwen3-Embedding-8B
+        - LLM: GLM-5 (cloud via Ollama)
+        - Embeddings: GLM-5-Embedding-8B
 
         **Stretch Goals:**
         - A: Chunk comparison

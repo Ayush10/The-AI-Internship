@@ -260,7 +260,7 @@ def generate_architecture_svg(theme: str = "dark") -> str:
         ("Embed", "Qwen3-Embedding", "hub"),
         ("Store", "ChromaDB", "storage"),
         ("Retrieve", "Vector + BM25", "search"),
-        ("Generate", "Qwen3", "smart_toy"),
+        ("Generate", "GLM-5", "smart_toy"),
         ("Answer", "Grounded Q&A", "chat"),
     ]
 

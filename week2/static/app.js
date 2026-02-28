@@ -339,7 +339,7 @@ function addMessage(role, text, sources = null, isError = false) {
                     <div class="flex items-center gap-4 pt-3 mt-3 border-t border-border-light dark:border-border-dark">
                         <div class="flex items-center gap-1 text-[10px] text-muted-light dark:text-muted-dark">
                             <span class="material-icons-round text-xs">smart_toy</span>
-                            Qwen3 · ${state.search_mode} · chunk ${state.chunk_size}
+                            GLM-5 · ${state.search_mode} · chunk ${state.chunk_size}
                         </div>
                         <span class="material-icons-round text-muted-light dark:text-muted-dark text-xs hover:text-primary cursor-pointer transition-colors ml-auto copy-btn" title="Copy">content_copy</span>
                     </div>

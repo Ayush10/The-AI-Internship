@@ -66,7 +66,7 @@ def generate_results_markdown(eval_results: list[dict], chat_responses: list[dic
     return f"""# RAG Q&A System — Evaluation Results
 
 **Generated:** {timestamp}
-**Models:** Qwen3 + Qwen3-Embedding-8B (4096 dim)
+**Models:** GLM-5 (cloud) + Qwen3-Embedding-8B (4096 dim)
 **Data:** 10 reinforcement learning research papers (247 pages)
 **Vector Store:** ChromaDB with pre-built embeddings
 
@@ -139,7 +139,7 @@ A fully interactive RAG (Retrieval-Augmented Generation) pipeline for question a
 
 | Component | Choice | Details |
 |-----------|--------|---------|
-| LLM | Qwen3 | Via Ollama, 744B parameters, 198K context |
+| LLM | GLM-5 (cloud) | Via Ollama, 744B parameters, 198K context |
 | Embeddings | Qwen3-Embedding-8B | Via Ollama, 4096 dimensions, #1 MTEB |
 | Vector DB | ChromaDB | Local persistent storage |
 | Framework | LangChain | RAG chain orchestration |
@@ -159,7 +159,7 @@ pip install -r requirements.txt
 
 # 2. Pull the required Ollama models
 ollama pull qwen3-embedding
-ollama pull qwen3:8b
+ollama pull glm-5:cloud
 
 # 3. Verify models are available
 ollama list
@@ -190,7 +190,7 @@ streamlit run app.py
 2. **Chunk** — RecursiveCharacterTextSplitter (300/500/1000 sizes)
 3. **Embed** — Qwen3-Embedding-8B → 4096-dim vectors → ChromaDB
 4. **Retrieve** — Vector search + BM25 hybrid (40/60 weighting)
-5. **Generate** — Qwen3 with grounding prompt → answers + sources
+5. **Generate** — GLM-5 with grounding prompt → answers + sources
 6. **Evaluate** — Heuristic + LLM-as-Judge dual scoring on 5-question set
 
 ### Stretch Goals
@@ -281,7 +281,7 @@ ChromaDB (3 collections: chunks_300, chunks_500, chunks_1000)
     ↓
 Retrieval: Vector Search + BM25 Hybrid (40/60 weighting)
     ↓
-Qwen3 (8B) (via Ollama, temperature=0, grounding prompt)
+GLM-5:cloud (via Ollama, temperature=0, grounding prompt)
     ↓
 Answer + Source Documents
 ```
@@ -290,7 +290,7 @@ Answer + Source Documents
 
 | Decision | Choice | Why |
 |----------|--------|-----|
-| LLM | Qwen3 (8B) | Free, large context (198K), strong reasoning |
+| LLM | GLM-5:cloud | Free, large context (198K), strong reasoning |
 | Embeddings | Qwen3-Embedding-8B | #1 on MTEB, 4096 dims, excellent semantic capture |
 | Vector DB | ChromaDB | Simple, local, persistent, good LangChain integration |
 | Chunking | RecursiveCharacterTextSplitter | Respects sentence boundaries, configurable overlap |
@@ -326,7 +326,7 @@ Answer + Source Documents
 - Topic-based filtering via ChromaDB metadata queries
 
 ### Step 5: Generation
-- `ChatOllama(model="qwen3:8b", temperature=0)` for deterministic output
+- `ChatOllama(model="glm-5:cloud", temperature=0)` for deterministic output
 - Custom grounding prompt: "Answer based ONLY on the provided context"
 - `RetrievalQA.from_chain_type` with "stuff" chain type
 - Returns answer + source documents for citation
@@ -340,7 +340,7 @@ Two complementary scoring methods:
 - Correctness: Composite score — 40% exact term match + 30% fuzzy match (SequenceMatcher>0.8) + 30% bigram overlap. Threshold: 0.35
 
 **LLM-as-Judge:**
-- Qwen3 evaluates each answer against expected answer
+- GLM-5 evaluates each answer against expected answer
 - Structured JSON output: retrieval (0/1), faithfulness (0/1), correctness (0.0-1.0), reasoning
 - More nuanced than heuristics — captures semantic equivalence
 
@@ -375,7 +375,7 @@ Two complementary scoring methods:
 |-----------|----------|
 | PDF parsing quality (equations, tables) | Accept limitations, focus on text-heavy sections |
 | Embedding speed for large datasets | Pre-build and persist ChromaDB collections |
-| Qwen3 network latency | SSE streaming for user feedback during long operations |
+| GLM-5 network latency | SSE streaming for user feedback during long operations |
 | Correctness scoring too crude | Dual approach: improved heuristics + LLM-as-judge |
 | Browser can't run ML models | Server-executed notebook with parameter extraction |
 | Long autoplay runtime (~10-20 min) | Real-time progress via SSE events |

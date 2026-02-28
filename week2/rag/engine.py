@@ -113,7 +113,7 @@ def get_ensemble_retriever(chunk_size: int = 500, k: int = 3) -> EnsembleRetriev
 def get_llm() -> ChatOllama:
     global _llm
     if _llm is None:
-        _llm = ChatOllama(model="qwen3:8b", base_url=OLLAMA_BASE_URL, temperature=0)
+        _llm = ChatOllama(model="glm-5:cloud", base_url=OLLAMA_BASE_URL, temperature=0)
     return _llm
 
 

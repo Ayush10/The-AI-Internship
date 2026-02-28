@@ -377,6 +377,13 @@ def serve_ui():
     html = (STATIC_DIR / "index.html").read_text()
     inject = f'<script>window.__BASE_PATH__ = "{BASE_PATH}";</script>'
     html = html.replace("</head>", f"{inject}</head>")
+    # Rewrite relative static paths to absolute so they work behind nginx subpath proxy
+    for old, new in [
+        ('href="static/favicon.png"', f'href="{BASE_PATH}/static/favicon.png"'),
+        ('href="static/style.css"', f'href="{BASE_PATH}/static/style.css"'),
+        ('src="static/app.js"', f'src="{BASE_PATH}/static/app.js"'),
+    ]:
+        html = html.replace(old, new)
     return HTMLResponse(html)
 
 

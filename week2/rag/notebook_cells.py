@@ -8,7 +8,7 @@ NOTEBOOK_CELLS = [
         "cell_id": "intro",
         "cell_type": "markdown",
         "step": None,
-        "content": "# RAG Document Q&A System\n## Reinforcement Learning Research Papers\n\nA RAG-powered Q&A system built on 10 reinforcement learning research papers.\n\n**Stack:**\n- **LLM:** Qwen3 via Ollama\n- **Embeddings:** Qwen3-Embedding-8B via Ollama (4096 dimensions)\n- **Vector DB:** ChromaDB\n- **Framework:** LangChain\n\n**Stretch Goals:** A (Chunk Comparison) | B (Hybrid BM25) | C (Metadata Filtering) | D (Web UI) | E (Multi-document)",
+        "content": "# RAG Document Q&A System\n## Reinforcement Learning Research Papers\n\nA RAG-powered Q&A system built on 10 reinforcement learning research papers.\n\n**Stack:**\n- **LLM:** GLM-5 (cloud) via Ollama\n- **Embeddings:** Qwen3-Embedding-8B via Ollama (4096 dimensions)\n- **Vector DB:** ChromaDB\n- **Framework:** LangChain\n\n**Stretch Goals:** A (Chunk Comparison) | B (Hybrid BM25) | C (Metadata Filtering) | D (Web UI) | E (Multi-document)",
         "default_output": None,
         "is_runnable": False,
     },

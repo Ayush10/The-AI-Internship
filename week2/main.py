@@ -21,7 +21,7 @@ app = FastAPI(
 
 A fully interactive notebook + chat interface built on 10 RL research papers.
 
-**Stack:** Qwen3 (Ollama) | Qwen3-Embedding-8B | ChromaDB | LangChain
+**Stack:** GLM-5 (Ollama) | Qwen3-Embedding-8B | ChromaDB | LangChain
 
 ### Features
 - Interactive notebook with 6-step RAG pipeline
@@ -49,6 +49,13 @@ def serve_ui():
     html = (STATIC_DIR / "index.html").read_text()
     inject = f'<script>window.__BASE_PATH__ = "{BASE_PATH}";</script>'
     html = html.replace("</head>", f"{inject}</head>")
+    # Rewrite relative static paths to absolute so they work behind nginx subpath proxy
+    for old, new in [
+        ('href="static/favicon.svg"', f'href="{BASE_PATH}/static/favicon.svg"'),
+        ('href="static/style.css"', f'href="{BASE_PATH}/static/style.css"'),
+        ('src="static/app.js"', f'src="{BASE_PATH}/static/app.js"'),
+    ]:
+        html = html.replace(old, new)
     return HTMLResponse(html)
 
 
