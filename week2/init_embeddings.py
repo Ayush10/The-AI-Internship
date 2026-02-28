@@ -63,6 +63,7 @@ def main():
 
     # Pull required models
     pull_model(ollama_url, "qwen3-embedding")
+    pull_model(ollama_url, "qwen3:8b")
 
     # Check if ChromaDB already has data
     try:

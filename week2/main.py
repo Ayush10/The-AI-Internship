@@ -21,7 +21,7 @@ app = FastAPI(
 
 A fully interactive notebook + chat interface built on 10 RL research papers.
 
-**Stack:** GLM-5 (Ollama) | Qwen3-Embedding-8B | ChromaDB | LangChain
+**Stack:** Qwen3 (Ollama) | Qwen3-Embedding-8B | ChromaDB | LangChain
 
 ### Features
 - Interactive notebook with 6-step RAG pipeline
@@ -32,7 +32,6 @@ A fully interactive notebook + chat interface built on 10 RL research papers.
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    root_path=BASE_PATH,
 )
 
 app.include_router(rag_router)

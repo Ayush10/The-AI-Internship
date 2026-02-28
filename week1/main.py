@@ -86,7 +86,6 @@ app = FastAPI(
     },
     docs_url="/docs",
     redoc_url="/redoc",
-    root_path=BASE_PATH,
 )
 
 app.include_router(history_router)
