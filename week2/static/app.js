@@ -71,7 +71,8 @@ document.getElementById("topic-filter").addEventListener("change", (e) => {
 
 // ─── API Helper ───
 async function callAPI(path, { method = "GET", body = null } = {}) {
-    const url = new URL(path, window.location.origin);
+    const base = window.__BASE_PATH__ || "";
+    const url = new URL(base + path, window.location.origin);
     const options = { method, headers: {} };
     if (body) {
         options.headers["Content-Type"] = "application/json";
@@ -441,7 +442,8 @@ function startAutoplay() {
 
     updateAutoplayBtn("running");
 
-    const eventSource = new EventSource(`/api/rag/autoplay?theme=${state.theme}`);
+    const base = window.__BASE_PATH__ || "";
+    const eventSource = new EventSource(`${base}/api/rag/autoplay?theme=${state.theme}`);
 
     eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -665,10 +667,11 @@ document.addEventListener("click", (e) => {
     const file = btn.dataset.file;
     if (!file) return;
 
+    const base = window.__BASE_PATH__ || "";
     if (file === "zip") {
-        window.location.href = "/api/rag/download/zip";
+        window.location.href = base + "/api/rag/download/zip";
     } else {
-        window.location.href = `/api/rag/download/${file}`;
+        window.location.href = `${base}/api/rag/download/${file}`;
     }
 });
 

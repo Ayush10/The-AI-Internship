@@ -662,7 +662,8 @@ function timeAgo(dateStr) {
 }
 
 async function callAPI(path, { method = "GET", body = null, params = {} } = {}) {
-    const url = new URL(path, window.location.origin);
+    const base = window.__BASE_PATH__ || "";
+    const url = new URL(base + path, window.location.origin);
 
     // Auto-attach fingerprint to LLM and conversation endpoints
     if (!path.startsWith("/auth/") && !path.startsWith("/health") && !path.startsWith("/providers/")) {

@@ -3,13 +3,16 @@ Week 2 — RAG Document Q&A System
 Standalone FastAPI app with interactive notebook + chat UI.
 """
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 
 from rag.router import router as rag_router
+
+BASE_PATH = os.environ.get("BASE_PATH", "")
 
 app = FastAPI(
     title="RAG Document Q&A — Week 2",
@@ -29,6 +32,7 @@ A fully interactive notebook + chat interface built on 10 RL research papers.
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    root_path=BASE_PATH,
 )
 
 app.include_router(rag_router)
@@ -43,7 +47,10 @@ def health():
 
 @app.get("/", include_in_schema=False)
 def serve_ui():
-    return FileResponse(str(STATIC_DIR / "index.html"))
+    html = (STATIC_DIR / "index.html").read_text()
+    inject = f'<script>window.__BASE_PATH__ = "{BASE_PATH}";</script>'
+    html = html.replace("</head>", f"{inject}</head>")
+    return HTMLResponse(html)
 
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

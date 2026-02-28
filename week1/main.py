@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -6,8 +7,10 @@ from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
+
+BASE_PATH = os.environ.get("BASE_PATH", "")
 
 from schemas import (
     HealthResponse,
@@ -83,6 +86,7 @@ app = FastAPI(
     },
     docs_url="/docs",
     redoc_url="/redoc",
+    root_path=BASE_PATH,
 )
 
 app.include_router(history_router)
@@ -369,7 +373,10 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 @app.get("/", include_in_schema=False)
 def serve_ui():
-    return FileResponse(str(STATIC_DIR / "index.html"))
+    html = (STATIC_DIR / "index.html").read_text()
+    inject = f'<script>window.__BASE_PATH__ = "{BASE_PATH}";</script>'
+    html = html.replace("</head>", f"{inject}</head>")
+    return HTMLResponse(html)
 
 
 # --- Helpers ---
