@@ -10,6 +10,18 @@ services:
         condition: service_healthy
       week2:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.aiinternship-http.entryPoints=http"
+      - "traefik.http.routers.aiinternship-http.rule=Host(`theaiinternship.ayushojha.com`)"
+      - "traefik.http.routers.aiinternship-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.aiinternship.entryPoints=https"
+      - "traefik.http.routers.aiinternship.rule=Host(`theaiinternship.ayushojha.com`)"
+      - "traefik.http.routers.aiinternship.tls=true"
+      - "traefik.http.routers.aiinternship.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.aiinternship.service=aiinternship"
+      - "traefik.http.services.aiinternship.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     networks:
       - coolify
       - internal
