@@ -21,6 +21,10 @@ const gateSubmit = document.getElementById("gate-submit");
 const messageCounter = document.getElementById("message-counter");
 const counterText = document.getElementById("counter-text");
 
+// Settings modal
+const settingsModal = document.getElementById("settings-modal");
+const settingsClose = document.getElementById("settings-close");
+
 // State
 let state = {
     provider: "gemini",
@@ -34,6 +38,7 @@ let state = {
 
 let currentUser = null;
 let providerAvailability = { gemini: true, openai: true, anthropic: true };
+let byokStatus = { openai: false, anthropic: false, gemini: false };
 
 // --- Fingerprint ---
 function getFingerprint() {
@@ -152,6 +157,9 @@ gateForm.addEventListener("submit", async (e) => {
             method: "POST",
             body: { name, email, fingerprint },
         });
+        if (currentUser.has_byok) {
+            byokStatus = currentUser.has_byok;
+        }
         localStorage.setItem("user_name", currentUser.name);
         localStorage.setItem("user_email", currentUser.email);
         showPlayground();
@@ -181,10 +189,19 @@ function showPlayground() {
 function updateMessageCounter() {
     if (!currentUser) return;
 
+    const hasByok = byokStatus.openai || byokStatus.anthropic || byokStatus.gemini ||
+        (currentUser.has_byok && (currentUser.has_byok.openai || currentUser.has_byok.anthropic || currentUser.has_byok.gemini));
+
     if (currentUser.is_admin) {
         messageCounter.classList.add("hidden");
         messageCounter.style.display = "none";
         updateUserDisplay(currentUser.name, "Unlimited");
+    } else if (hasByok) {
+        messageCounter.classList.remove("hidden");
+        messageCounter.style.display = "flex";
+        counterText.textContent = "BYOK";
+        counterText.classList.remove("!text-red-500");
+        updateUserDisplay(currentUser.name, "Unlimited (BYOK)");
     } else {
         const remaining = currentUser.messages_remaining;
         messageCounter.classList.remove("hidden");
@@ -218,6 +235,9 @@ async function initApp() {
 
     try {
         currentUser = await callAPI("/auth/me", { params: { fingerprint } });
+        if (currentUser.has_byok) {
+            byokStatus = currentUser.has_byok;
+        }
         showPlayground();
         updateMessageCounter();
     } catch {
@@ -249,9 +269,10 @@ async function handleSend() {
     const text = userInput.value.trim();
     if (!text || state.isProcessing) return;
 
-    if (currentUser && !currentUser.is_admin && currentUser.messages_remaining <= 0) {
+    const hasByok = byokStatus.openai || byokStatus.anthropic || byokStatus.gemini;
+    if (currentUser && !currentUser.is_admin && !hasByok && currentUser.messages_remaining <= 0) {
         clearWelcome();
-        addSystemNote("Message limit reached. Contact admin for unlimited access.");
+        addSystemNote("Message limit reached. Add your own API keys in Settings for unlimited access.");
         return;
     }
 
@@ -355,8 +376,9 @@ async function handleEnhance() {
     const text = userInput.value.trim();
     if (!text || state.isProcessing) return;
 
-    if (currentUser && !currentUser.is_admin && currentUser.messages_remaining <= 0) {
-        addSystemNote("Message limit reached. Contact admin for unlimited access.");
+    const hasByokE = byokStatus.openai || byokStatus.anthropic || byokStatus.gemini;
+    if (currentUser && !currentUser.is_admin && !hasByokE && currentUser.messages_remaining <= 0) {
+        addSystemNote("Message limit reached. Add your own API keys in Settings for unlimited access.");
         return;
     }
 
@@ -659,6 +681,135 @@ function timeAgo(dateStr) {
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
     return date.toLocaleDateString();
+}
+
+// --- Settings / BYOK ---
+
+document.querySelectorAll(".settings-trigger").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openSettings();
+    });
+});
+
+settingsClose?.addEventListener("click", closeSettings);
+settingsModal?.addEventListener("click", (e) => {
+    if (e.target === settingsModal) closeSettings();
+});
+
+function openSettings() {
+    if (!settingsModal) return;
+    settingsModal.style.display = "flex";
+    settingsModal.classList.remove("hidden");
+    loadBYOKStatus();
+}
+
+function closeSettings() {
+    if (!settingsModal) return;
+    settingsModal.style.display = "none";
+    settingsModal.classList.add("hidden");
+}
+
+async function loadBYOKStatus() {
+    try {
+        byokStatus = await callAPI("/auth/byok", { params: { fingerprint: getFingerprint() } });
+        updateBYOKUI();
+    } catch (err) {
+        console.warn("Failed to load BYOK status:", err);
+    }
+}
+
+function updateBYOKUI() {
+    for (const provider of ["openai", "anthropic", "gemini"]) {
+        const badge = document.getElementById(`byok-badge-${provider}`);
+        const input = document.getElementById(`byok-${provider}`);
+        const saveBtn = document.querySelector(`[data-byok-save="${provider}"]`);
+        const removeBtn = document.querySelector(`[data-byok-remove="${provider}"]`);
+
+        if (byokStatus[provider]) {
+            badge?.classList.remove("hidden");
+            if (input) input.placeholder = "••••••••••••";
+            if (input) input.value = "";
+            saveBtn?.classList.add("hidden");
+            removeBtn?.classList.remove("hidden");
+        } else {
+            badge?.classList.add("hidden");
+            if (input) input.placeholder = provider === "openai" ? "sk-..." : provider === "anthropic" ? "sk-ant-..." : "AI...";
+            saveBtn?.classList.remove("hidden");
+            removeBtn?.classList.add("hidden");
+        }
+    }
+    updateMessageCounter();
+}
+
+document.querySelectorAll("[data-byok-save]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+        const provider = btn.dataset.byokSave;
+        const input = document.getElementById(`byok-${provider}`);
+        const key = input?.value?.trim();
+        if (!key) return;
+
+        btn.disabled = true;
+        btn.textContent = "Saving...";
+
+        try {
+            byokStatus = await callAPI("/auth/byok", {
+                method: "POST",
+                body: { provider, api_key: key },
+                params: { fingerprint: getFingerprint() },
+            });
+            updateBYOKUI();
+            showBYOKMessage("Key saved successfully!", "success");
+            if (currentUser) {
+                currentUser.has_byok = { ...byokStatus };
+            }
+        } catch (err) {
+            showBYOKMessage(err.message || "Failed to save key", "error");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Save";
+        }
+    });
+});
+
+document.querySelectorAll("[data-byok-remove]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+        const provider = btn.dataset.byokRemove;
+        btn.disabled = true;
+        btn.textContent = "Removing...";
+
+        try {
+            byokStatus = await callAPI("/auth/byok", {
+                method: "POST",
+                body: { provider, api_key: "" },
+                params: { fingerprint: getFingerprint() },
+            });
+            updateBYOKUI();
+            showBYOKMessage("Key removed", "success");
+            if (currentUser) {
+                currentUser.has_byok = { ...byokStatus };
+            }
+        } catch (err) {
+            showBYOKMessage(err.message || "Failed to remove key", "error");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Remove";
+        }
+    });
+});
+
+function showBYOKMessage(text, type) {
+    const el = document.getElementById("byok-message");
+    if (!el) return;
+    el.textContent = text;
+    el.classList.remove("hidden", "text-emerald-600", "bg-emerald-50", "text-red-500", "bg-red-50",
+        "dark:text-emerald-400", "dark:bg-emerald-500/10", "dark:text-red-400", "dark:bg-red-500/10");
+    if (type === "success") {
+        el.classList.add("text-emerald-600", "bg-emerald-50", "dark:text-emerald-400", "dark:bg-emerald-500/10");
+    } else {
+        el.classList.add("text-red-500", "bg-red-50", "dark:text-red-400", "dark:bg-red-500/10");
+    }
+    setTimeout(() => el.classList.add("hidden"), 3000);
 }
 
 async function callAPI(path, { method = "GET", body = null, params = {} } = {}) {

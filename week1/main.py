@@ -28,7 +28,7 @@ from prompts import (
 from config import DEFAULT_PROVIDER, ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY, MESSAGE_LIMIT
 from models import init_db, get_db, Conversation, Message, User
 from history import router as history_router
-from auth import router as auth_router
+from auth import router as auth_router, get_user_keys
 
 DESCRIPTION = """
 ## AI-Powered Text Analysis API
@@ -121,9 +121,11 @@ def require_user_with_quota(
     user = db.query(User).filter(User.fingerprint == fingerprint).first()
     if not user:
         raise HTTPException(403, "Not registered. Please complete the access gate.")
-    if not user.is_admin and user.message_count >= MESSAGE_LIMIT:
-        raise HTTPException(429, f"Message limit reached ({MESSAGE_LIMIT} messages). Contact admin for unlimited access.")
-    return user, db
+    user_keys = get_user_keys(user)
+    has_byok = bool(user_keys)
+    if not user.is_admin and not has_byok and user.message_count >= MESSAGE_LIMIT:
+        raise HTTPException(429, f"Message limit reached ({MESSAGE_LIMIT} messages). Add your own API keys in Settings for unlimited access.")
+    return user, db, user_keys
 
 
 def _increment_message_count(user, db: Session):
@@ -189,7 +191,7 @@ def summarize(
     conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
     user_quota: tuple = Depends(require_user_with_quota),
 ):
-    user, db = user_quota
+    user, db, user_keys = user_quota
     provider_name = provider or DEFAULT_PROVIDER
     version = prompt_version or DEFAULT_SUMMARIZE_PROMPT
 
@@ -198,7 +200,7 @@ def summarize(
         raise HTTPException(400, f"Invalid prompt_version: {version}. Choose 1, 2, or 3.")
 
     prompt = prompt_template.format(text=request.text, max_length=request.max_length)
-    llm = get_provider(provider_name)
+    llm = get_provider(provider_name, user_keys)
 
     try:
         summary = llm.generate(prompt, max_tokens=request.max_length * 2)
@@ -247,7 +249,7 @@ def analyze_sentiment(
     conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
     user_quota: tuple = Depends(require_user_with_quota),
 ):
-    user, db = user_quota
+    user, db, user_keys = user_quota
     provider_name = provider or DEFAULT_PROVIDER
     version = prompt_version or DEFAULT_SENTIMENT_PROMPT
 
@@ -256,7 +258,7 @@ def analyze_sentiment(
         raise HTTPException(400, f"Invalid prompt_version: {version}. Choose 1, 2, or 3.")
 
     prompt = prompt_template.format(text=request.text)
-    llm = get_provider(provider_name)
+    llm = get_provider(provider_name, user_keys)
 
     try:
         raw_response = llm.generate(prompt, max_tokens=256)
@@ -300,9 +302,9 @@ def chat(
     conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
     user_quota: tuple = Depends(require_user_with_quota),
 ):
-    user, db = user_quota
+    user, db, user_keys = user_quota
     system_prompt = CHAT_SYSTEM_PROMPTS.get(request.mode, CHAT_SYSTEM_PROMPTS["general"])
-    llm = get_provider(request.provider)
+    llm = get_provider(request.provider, user_keys)
 
     try:
         response = llm.generate_with_system(system_prompt, request.message, max_tokens=1024)
@@ -333,9 +335,9 @@ def enhance_prompt(
     conversation_id: UUID | None = Query(default=None, description="Conversation ID to append to"),
     user_quota: tuple = Depends(require_user_with_quota),
 ):
-    user, db = user_quota
+    user, db, user_keys = user_quota
     provider_name = DEFAULT_PROVIDER
-    llm = get_provider(provider_name)
+    llm = get_provider(provider_name, user_keys)
 
     try:
         raw = llm.generate_with_system(

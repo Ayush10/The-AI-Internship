@@ -12,11 +12,12 @@ class LLMProvider(ABC):
 
 
 class AnthropicProvider(LLMProvider):
-    def __init__(self):
-        if not config.ANTHROPIC_API_KEY:
-            raise HTTPException(400, "ANTHROPIC_API_KEY is not configured")
+    def __init__(self, api_key: str | None = None):
+        key = api_key or config.ANTHROPIC_API_KEY
+        if not key:
+            raise HTTPException(400, "Anthropic API key is not configured. Add your own key in Settings.")
         import anthropic
-        self.client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+        self.client = anthropic.Anthropic(api_key=key)
 
     def generate(self, prompt: str, max_tokens: int = 1024) -> str:
         message = self.client.messages.create(
@@ -37,11 +38,12 @@ class AnthropicProvider(LLMProvider):
 
 
 class OpenAIProvider(LLMProvider):
-    def __init__(self):
-        if not config.OPENAI_API_KEY:
-            raise HTTPException(400, "OPENAI_API_KEY is not configured")
+    def __init__(self, api_key: str | None = None):
+        key = api_key or config.OPENAI_API_KEY
+        if not key:
+            raise HTTPException(400, "OpenAI API key is not configured. Add your own key in Settings.")
         from openai import OpenAI
-        self.client = OpenAI(api_key=config.OPENAI_API_KEY)
+        self.client = OpenAI(api_key=key)
 
     def generate(self, prompt: str, max_tokens: int = 1024) -> str:
         completion = self.client.chat.completions.create(
@@ -64,11 +66,12 @@ class OpenAIProvider(LLMProvider):
 
 
 class GeminiProvider(LLMProvider):
-    def __init__(self):
-        if not config.GOOGLE_API_KEY:
-            raise HTTPException(400, "GOOGLE_API_KEY is not configured")
+    def __init__(self, api_key: str | None = None):
+        key = api_key or config.GOOGLE_API_KEY
+        if not key:
+            raise HTTPException(400, "Gemini API key is not configured. Add your own key in Settings.")
         from google import genai
-        self.client = genai.Client(api_key=config.GOOGLE_API_KEY)
+        self.client = genai.Client(api_key=key)
 
     def generate(self, prompt: str, max_tokens: int = 1024) -> str:
         response = self.client.models.generate_content(
@@ -96,8 +99,9 @@ PROVIDERS = {
 }
 
 
-def get_provider(name: str) -> LLMProvider:
+def get_provider(name: str, user_keys: dict | None = None) -> LLMProvider:
     cls = PROVIDERS.get(name)
     if cls is None:
         raise HTTPException(400, f"Unknown provider: {name}. Choose from: {list(PROVIDERS.keys())}")
-    return cls()
+    user_key = (user_keys or {}).get(name)
+    return cls(api_key=user_key)

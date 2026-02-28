@@ -117,6 +117,9 @@ class User(Base):
     fingerprint = Column(String(36), nullable=False, unique=True)
     message_count = Column(Integer, nullable=False, default=0)
     is_admin = Column(Boolean, nullable=False, default=False)
+    byok_openai = Column(Text, nullable=True)
+    byok_anthropic = Column(Text, nullable=True)
+    byok_gemini = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
 

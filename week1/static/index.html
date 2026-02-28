@@ -117,7 +117,7 @@
         <p
           class="text-center text-muted-light dark:text-muted-dark text-xs mt-4"
         >
-          Free accounts have a limit of 5 messages
+          Free accounts have a limit of 5 messages &middot; Bring your own API keys for unlimited access
         </p>
       </div>
     </div>
@@ -207,7 +207,7 @@
             <p class="text-[10px] text-primary font-medium">Pro Plan</p>
           </div>
           <span
-            class="material-icons-round text-muted-light dark:text-muted-dark text-sm group-hover:text-primary transition-colors"
+            class="material-icons-round text-muted-light dark:text-muted-dark text-sm group-hover:text-primary transition-colors settings-trigger"
             >settings</span
           >
         </div>
@@ -261,10 +261,10 @@
               <span class="material-icons-round text-sm">history</span>
             </button>
             <button
-              class="text-muted-light dark:text-muted-dark hover:text-primary transition-colors p-1"
-              title="More options"
+              class="text-muted-light dark:text-muted-dark hover:text-primary transition-colors p-1 settings-trigger"
+              title="API Keys / Settings"
             >
-              <span class="material-icons-round text-sm">more_vert</span>
+              <span class="material-icons-round text-sm">vpn_key</span>
             </button>
           </div>
         </div>
@@ -504,6 +504,71 @@
         </div>
       </div>
     </main>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-300" style="display:none">
+      <div class="w-full max-w-lg mx-4 bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-primary-soft dark:bg-primary/15 rounded-lg flex items-center justify-center">
+              <span class="material-icons-round text-primary text-sm">vpn_key</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-text-light dark:text-text-dark">API Keys</h3>
+              <p class="text-[10px] text-muted-light dark:text-muted-dark">Bring your own keys for unlimited access</p>
+            </div>
+          </div>
+          <button id="settings-close" class="text-muted-light dark:text-muted-dark hover:text-text-light dark:hover:text-text-dark transition-colors p-1">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+          <p class="text-xs text-muted-light dark:text-muted-dark leading-relaxed">
+            Add your own API keys to bypass the message limit. Keys are stored securely on the server and used only for your requests.
+          </p>
+          <!-- OpenAI -->
+          <div class="space-y-1.5">
+            <label class="flex items-center gap-2 text-xs font-semibold text-text-light dark:text-text-dark">
+              <div class="w-1.5 h-1.5 rounded-full dot-openai"></div>
+              OpenAI
+              <span id="byok-badge-openai" class="hidden text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-full">ACTIVE</span>
+            </label>
+            <div class="flex gap-2">
+              <input id="byok-openai" type="password" placeholder="sk-..." class="flex-1 bg-white dark:bg-white/[0.04] border border-border-light dark:border-white/[0.1] rounded-lg px-3 py-2 text-xs text-text-light dark:text-text-dark placeholder-muted-light dark:placeholder-muted-dark focus:ring-2 focus:ring-primary/30 focus:border-primary/40 outline-none transition-all font-mono" />
+              <button data-byok-save="openai" class="px-3 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg transition-all active:scale-95">Save</button>
+              <button data-byok-remove="openai" class="hidden px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-semibold rounded-lg transition-all active:scale-95">Remove</button>
+            </div>
+          </div>
+          <!-- Anthropic -->
+          <div class="space-y-1.5">
+            <label class="flex items-center gap-2 text-xs font-semibold text-text-light dark:text-text-dark">
+              <div class="w-1.5 h-1.5 rounded-full dot-anthropic"></div>
+              Anthropic
+              <span id="byok-badge-anthropic" class="hidden text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-full">ACTIVE</span>
+            </label>
+            <div class="flex gap-2">
+              <input id="byok-anthropic" type="password" placeholder="sk-ant-..." class="flex-1 bg-white dark:bg-white/[0.04] border border-border-light dark:border-white/[0.1] rounded-lg px-3 py-2 text-xs text-text-light dark:text-text-dark placeholder-muted-light dark:placeholder-muted-dark focus:ring-2 focus:ring-primary/30 focus:border-primary/40 outline-none transition-all font-mono" />
+              <button data-byok-save="anthropic" class="px-3 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg transition-all active:scale-95">Save</button>
+              <button data-byok-remove="anthropic" class="hidden px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-semibold rounded-lg transition-all active:scale-95">Remove</button>
+            </div>
+          </div>
+          <!-- Gemini -->
+          <div class="space-y-1.5">
+            <label class="flex items-center gap-2 text-xs font-semibold text-text-light dark:text-text-dark">
+              <div class="w-1.5 h-1.5 rounded-full dot-gemini"></div>
+              Gemini
+              <span id="byok-badge-gemini" class="hidden text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-full">ACTIVE</span>
+            </label>
+            <div class="flex gap-2">
+              <input id="byok-gemini" type="password" placeholder="AI..." class="flex-1 bg-white dark:bg-white/[0.04] border border-border-light dark:border-white/[0.1] rounded-lg px-3 py-2 text-xs text-text-light dark:text-text-dark placeholder-muted-light dark:placeholder-muted-dark focus:ring-2 focus:ring-primary/30 focus:border-primary/40 outline-none transition-all font-mono" />
+              <button data-byok-save="gemini" class="px-3 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg transition-all active:scale-95">Save</button>
+              <button data-byok-remove="gemini" class="hidden px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-semibold rounded-lg transition-all active:scale-95">Remove</button>
+            </div>
+          </div>
+          <div id="byok-message" class="hidden text-xs text-center py-2 rounded-lg"></div>
+        </div>
+      </div>
+    </div>
 
     <!-- Background Glow -->
     <div

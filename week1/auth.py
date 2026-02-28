@@ -2,10 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from models import get_db, User
-from schemas import UserRegisterRequest, UserResponse
+from schemas import UserRegisterRequest, UserResponse, BYOKSaveRequest, BYOKStatusResponse
 from config import ADMIN_NAME, ADMIN_EMAIL, MESSAGE_LIMIT
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+BYOK_COLUMNS = {
+    "openai": "byok_openai",
+    "anthropic": "byok_anthropic",
+    "gemini": "byok_gemini",
+}
 
 
 @router.post(
@@ -59,6 +65,69 @@ def get_current_user(
     return _build_response(user)
 
 
+@router.post(
+    "/byok",
+    response_model=BYOKStatusResponse,
+    summary="Save API Key (BYOK)",
+    description="Save your own API key for a provider. Send empty api_key to remove it.",
+)
+def save_byok(
+    request: BYOKSaveRequest,
+    fingerprint: str = Query(description="Browser fingerprint UUID"),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.fingerprint == fingerprint).first()
+    if not user:
+        raise HTTPException(404, "User not found. Please register first.")
+
+    col = BYOK_COLUMNS.get(request.provider)
+    if not col:
+        raise HTTPException(400, f"Unknown provider: {request.provider}. Choose from: {list(BYOK_COLUMNS.keys())}")
+
+    key_value = request.api_key.strip() if request.api_key else None
+    setattr(user, col, key_value or None)
+    db.commit()
+    db.refresh(user)
+
+    return _build_byok_status(user)
+
+
+@router.get(
+    "/byok",
+    response_model=BYOKStatusResponse,
+    summary="BYOK Status",
+    description="Check which providers have user-supplied API keys.",
+)
+def get_byok_status(
+    fingerprint: str = Query(description="Browser fingerprint UUID"),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.fingerprint == fingerprint).first()
+    if not user:
+        raise HTTPException(404, "User not found. Please register first.")
+    return _build_byok_status(user)
+
+
+def get_user_keys(user: User) -> dict:
+    """Return a dict of provider -> api_key for providers where user has BYOK keys."""
+    keys = {}
+    if user.byok_openai:
+        keys["openai"] = user.byok_openai
+    if user.byok_anthropic:
+        keys["anthropic"] = user.byok_anthropic
+    if user.byok_gemini:
+        keys["gemini"] = user.byok_gemini
+    return keys
+
+
+def _build_byok_status(user: User) -> BYOKStatusResponse:
+    return BYOKStatusResponse(
+        openai=bool(user.byok_openai),
+        anthropic=bool(user.byok_anthropic),
+        gemini=bool(user.byok_gemini),
+    )
+
+
 def _build_response(user: User) -> UserResponse:
     remaining = None if user.is_admin else max(0, MESSAGE_LIMIT - user.message_count)
     return UserResponse(
@@ -69,5 +138,6 @@ def _build_response(user: User) -> UserResponse:
         message_count=user.message_count,
         is_admin=user.is_admin,
         messages_remaining=remaining,
+        has_byok=_build_byok_status(user).model_dump(),
         created_at=user.created_at,
     )

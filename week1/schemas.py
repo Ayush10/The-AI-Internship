@@ -177,6 +177,18 @@ class UserResponse(BaseModel):
     message_count: int
     is_admin: bool
     messages_remaining: Optional[int] = Field(description="Messages remaining (None for admin)")
+    has_byok: dict = Field(default_factory=dict, description="Which providers have user-supplied keys")
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class BYOKSaveRequest(BaseModel):
+    provider: str = Field(description="Provider name: openai, anthropic, or gemini")
+    api_key: str = Field(description="API key for the provider (empty string to remove)")
+
+
+class BYOKStatusResponse(BaseModel):
+    openai: bool = False
+    anthropic: bool = False
+    gemini: bool = False
