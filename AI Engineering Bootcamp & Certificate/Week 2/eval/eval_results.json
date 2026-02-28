@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-02-27T14:36:01.000597",
+  "models": {
+    "llm": "glm-5:cloud",
+    "embeddings": "qwen3-embedding:8b (4096 dim)"
+  },
+  "scores": {
+    "chunk_300": {
+      "retrieval": 5,
+      "faithfulness": 4,
+      "correctness": 3
+    },
+    "chunk_500": {
+      "retrieval": 5,
+      "faithfulness": 5,
+      "correctness": 3
+    },
+    "chunk_1000": {
+      "retrieval": 5,
+      "faithfulness": 5,
+      "correctness": 4
+    },
+    "hybrid_500": {
+      "retrieval": 5,
+      "faithfulness": 5,
+      "correctness": 4
+    }
+  },
+  "eval_questions": [
+    {
+      "question": "What architecture does DRQN use to handle partial observability?",
+      "expected_answer": "DRQN replaces the first fully connected layer of DQN with an LSTM recurrent layer to handle partial observability.",
+      "generated_answer_500": "DRQN uses a combination of a Long Short Term Memory (LSTM) and a Deep Q-Network to handle partial observability (arXiv:1507.06527v4). This architecture allows the network to integrate information across frames to detect relevant details, such as the velocity of on-screen objects, even when it observes only a single frame at each step.",
+      "retrieval_500": true,
+      "faithfulness_500": true,
+      "correctness_500": false
+    },
+    {
+      "question": "What is the burn-in strategy in R2D2?",
+      "expected_answer": "Burn-in uses a portion of the replay sequence to initialize the recurrent state before the actual training segment, producing a better initial hidden state.",
+      "generated_answer_500": "Based on the provided context, the burn-in strategy is described by its hypothesized benefit rather than its explicit procedural definition. The context states that the beneficial effect of burn-in lies in its ability to prevent \"destructive updates\" to the RNN parameters. These updates would otherwise result from \"highly inaccurate initial outputs on the first few time steps after a zero state initialization\" (Source: first paragraph). The context further notes that a \"zero state strategy without burn-in\" performed worse overall.",
+      "retrieval_500": true,
+      "faithfulness_500": true,
+      "correctness_500": false
+    },
+    {
+      "question": "What is the key contribution of Constrained Policy Optimization (CPO)?",
+      "expected_answer": "CPO provides near-constraint satisfaction guarantees at each policy update, enabling safe reinforcement learning with cost constraints.",
+      "generated_answer_500": "Based on the provided context, the key contribution of Constrained Policy Optimization (CPO) is that it is the **first general-purpose policy search algorithm for constrained reinforcement learning**.\n\nSpecifically, the context notes that CPO:\n*   Provides **guarantees for near-constraint satisfaction at each iteration**.\n*   Allows for the training of **neural network policies**.\n*   Alleviates the issue of **off-policy evaluation** while ensuring **monotonic performance improvement** and constraint satisfaction for Constrained Markov Decision Processes (CMDPs).\n\n**Source:** *Constrained Policy Optimization* (Introduction and Section 5.3).",
+      "retrieval_500": true,
+      "faithfulness_500": true,
+      "correctness_500": true
+    },
+    {
+      "question": "What is the Gated Transformer-XL (GTrXL) and what problem does it solve?",
+      "expected_answer": "GTrXL is a stabilized transformer architecture for RL that replaces residual connections with gating layers, enabling stable training of transformers in RL settings.",
+      "generated_answer_500": "Based on the provided context, the Gated Transformer-XL (GTrXL) is a proposed architecture that modifies the original Transformer and Transformer-XL variants. It involves reordering the layer normalization and replacing residual connections with gating layers.\n\nIt solves the problem of **critical instability** observed in the original transformer model, which is especially pronounced with reinforcement learning (RL) objectives. This instability previously led authors to hypothesize that the transformer architecture was unsuitable for processing sequential information. The GTrXL stabilizes training, improves learning speed, and surpasses LSTMs on challenging memory environments, achieving state-of-the-art results on the multi-task DMLab-30 benchmark suite.",
+      "retrieval_500": true,
+      "faithfulness_500": true,
+      "correctness_500": true
+    },
+    {
+      "question": "How does DreamerV3 handle the challenge of varying signal magnitudes across different domains?",
+      "expected_answer": "DreamerV3 uses symlog predictions that transform targets with a logarithmic function to handle the wide range of reward magnitudes across different domains.",
+      "generated_answer_500": "Based on the provided context, the text does not explicitly mention \"varying signal magnitudes.\" However, it states that DreamerV3 uses \"robustness techniques based on normalization, balancing, and transformations\" to enable stable learning across domains.\n\nSpecifically, the paper lists the following techniques under robustness (DreamerV3 section):\n*   **Observation symlog**\n*   **Symexp twohot loss** for the reward head and critic\n*   **Percentile return normalization**\n\nThese techniques allow the algorithm to outperform specialized methods across over 150 diverse tasks with a single configuration.",
+      "retrieval_500": true,
+      "faithfulness_500": true,
+      "correctness_500": true
+    }
+  ],
+  "stretch_goals": {
+    "A_chunk_comparison": true,
+    "B_hybrid_search": true,
+    "C_metadata_filtering": true,
+    "D_streamlit_ui": "see app.py",
+    "E_multi_document": "PDF + TXT + CSV"
+  }
+}

@@ -1,0 +1,281 @@
+<!doctype html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+    <title>RAG Q&A — Week 2</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+    <script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    primary: "#2563eb",
+                    "primary-hover": "#1d4ed8",
+                    "primary-light": "#3b82f6",
+                    "primary-soft": "#eff6ff",
+                    "background-light": "#fafaf8",
+                    "background-dark": "#0f0f0f",
+                    "surface-light": "#ffffff",
+                    "surface-dark": "#1a1a1a",
+                    "text-light": "#1a1a1a",
+                    "text-dark": "#e5e5e5",
+                    "muted-light": "#666666",
+                    "muted-dark": "#a3a3a3",
+                    "border-light": "#e5e5e5",
+                    "border-dark": "#2a2a2a",
+                },
+                fontFamily: { display: ["DM Sans", "Inter", "sans-serif"] },
+            },
+        },
+    };
+    </script>
+    <!-- Marked.js for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.0/marked.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark overflow-hidden h-screen flex flex-col transition-colors duration-300">
+
+    <!-- Header -->
+    <header class="px-4 py-3 border-b border-border-light dark:border-border-dark glass flex items-center justify-between shrink-0 z-20">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/25">
+                <span class="material-icons-round text-white text-sm">menu_book</span>
+            </div>
+            <div>
+                <h1 class="text-sm font-bold tracking-tight">RAG Document Q&A</h1>
+                <p class="text-[10px] text-muted-light dark:text-muted-dark">Week 2 — Reinforcement Learning Papers</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <!-- Tab Toggle -->
+            <div class="flex bg-primary-soft dark:bg-white/[0.04] rounded-lg p-1 border border-primary/10 dark:border-white/[0.08]">
+                <button id="tab-notebook" data-tab="notebook" class="tab-btn bg-white dark:bg-primary/25 text-primary dark:text-primary-light text-[11px] font-bold py-1.5 px-3 rounded-md transition-all shadow-sm">
+                    <span class="material-icons-round text-xs mr-1 align-middle">code</span>Notebook
+                </button>
+                <button id="tab-chat" data-tab="chat" class="tab-btn text-muted-light dark:text-muted-dark hover:text-primary text-[11px] font-medium py-1.5 px-3 rounded-md transition-all">
+                    <span class="material-icons-round text-xs mr-1 align-middle">chat</span>Q&A Chat
+                </button>
+                <button id="tab-results" data-tab="results" class="tab-btn text-muted-light dark:text-muted-dark hover:text-primary text-[11px] font-medium py-1.5 px-3 rounded-md transition-all">
+                    <span class="material-icons-round text-xs mr-1 align-middle">insights</span>Results
+                </button>
+            </div>
+            <button id="autoplay-btn" class="autoplay-btn ml-2" title="Run entire pipeline automatically">
+                <span class="material-icons-round text-sm">rocket_launch</span>
+                <span class="autoplay-label">Autoplay</span>
+            </button>
+            <div class="h-4 w-[1px] bg-border-light dark:bg-border-dark mx-1"></div>
+            <button id="theme-toggle" class="text-muted-light dark:text-muted-dark hover:text-primary transition-colors p-1.5 rounded-full hover:bg-primary-soft dark:hover:bg-white/5" title="Toggle Theme">
+                <span class="material-icons-round text-sm" id="theme-icon">light_mode</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-hidden relative">
+
+        <!-- Notebook View -->
+        <div id="view-notebook" class="h-full overflow-y-auto p-4 md:p-6 custom-scrollbar">
+            <!-- Run All bar -->
+            <div class="max-w-4xl mx-auto mb-4 flex items-center justify-between">
+                <p class="text-xs text-muted-light dark:text-muted-dark">
+                    <span class="material-icons-round text-xs align-middle mr-1">info</span>
+                    Edit parameters in code cells and click Run. Execution happens server-side.
+                </p>
+                <button id="run-all-btn" class="nb-run-btn">
+                    <span class="material-icons-round">play_arrow</span> Run All
+                </button>
+            </div>
+            <!-- Cells will be rendered here -->
+            <div id="notebook-cells" class="max-w-4xl mx-auto space-y-4 pb-8"></div>
+        </div>
+
+        <!-- Chat View -->
+        <div id="view-chat" class="h-full flex flex-col hidden">
+            <!-- Chat messages -->
+            <div id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar">
+                <div class="welcome-message text-center py-12 px-4">
+                    <div class="w-16 h-16 bg-primary-soft dark:bg-primary/15 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-primary/10 dark:shadow-primary/20">
+                        <span class="material-icons-round text-3xl text-primary">menu_book</span>
+                    </div>
+                    <h2 class="text-xl font-bold mb-2">RL Papers Q&A</h2>
+                    <p class="text-muted-light dark:text-muted-dark text-sm max-w-md mx-auto leading-relaxed mb-6">
+                        Ask questions about 10 reinforcement learning research papers.<br>
+                        Powered by <strong class="text-text-light dark:text-text-dark">GLM-5</strong> + <strong class="text-text-light dark:text-text-dark">Qwen3-Embedding</strong> + <strong class="text-text-light dark:text-text-dark">ChromaDB</strong>.
+                    </p>
+                    <!-- Example queries -->
+                    <div class="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
+                        <button class="example-q source-chip hover:bg-primary/10 cursor-pointer transition-colors text-xs" data-q="How does DRQN handle partial observability?">How does DRQN handle partial observability?</button>
+                        <button class="example-q source-chip hover:bg-primary/10 cursor-pointer transition-colors text-xs" data-q="What is the burn-in technique in R2D2?">What is burn-in in R2D2?</button>
+                        <button class="example-q source-chip hover:bg-primary/10 cursor-pointer transition-colors text-xs" data-q="How does DreamerV3 generalize across domains?">How does DreamerV3 generalize?</button>
+                        <button class="example-q source-chip hover:bg-primary/10 cursor-pointer transition-colors text-xs" data-q="What guarantees does CPO provide for safe RL?">CPO safety guarantees?</button>
+                        <button class="example-q source-chip hover:bg-primary/10 cursor-pointer transition-colors text-xs" data-q="What is the Gated Transformer-XL architecture?">What is GTrXL?</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Settings + Input -->
+            <div class="p-4 border-t border-border-light dark:border-border-dark shrink-0">
+                <div class="max-w-3xl mx-auto">
+                    <!-- Settings row -->
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <div class="flex bg-primary-soft dark:bg-white/[0.04] rounded-lg p-1 border border-primary/10 dark:border-white/[0.08]">
+                            <button class="setting-btn active text-[10px] font-bold py-1 px-2.5 rounded-md bg-white dark:bg-primary/25 text-primary dark:text-primary-light shadow-sm" data-group="search_mode" data-value="hybrid">Hybrid</button>
+                            <button class="setting-btn text-[10px] font-medium py-1 px-2.5 rounded-md text-muted-light dark:text-muted-dark" data-group="search_mode" data-value="vector">Vector</button>
+                        </div>
+                        <div class="flex bg-primary-soft dark:bg-white/[0.04] rounded-lg p-1 border border-primary/10 dark:border-white/[0.08]">
+                            <button class="setting-btn text-[10px] font-medium py-1 px-2.5 rounded-md text-muted-light dark:text-muted-dark" data-group="chunk_size" data-value="300">300</button>
+                            <button class="setting-btn active text-[10px] font-bold py-1 px-2.5 rounded-md bg-white dark:bg-primary/25 text-primary dark:text-primary-light shadow-sm" data-group="chunk_size" data-value="500">500</button>
+                            <button class="setting-btn text-[10px] font-medium py-1 px-2.5 rounded-md text-muted-light dark:text-muted-dark" data-group="chunk_size" data-value="1000">1000</button>
+                        </div>
+                        <select id="topic-filter" class="text-[10px] font-medium py-1 px-2 rounded-lg bg-primary-soft dark:bg-white/[0.04] border border-primary/10 dark:border-white/[0.08] text-text-light dark:text-text-dark outline-none">
+                            <option value="">All Topics</option>
+                            <option value="POMDP">POMDP</option>
+                            <option value="Batch RL">Batch RL</option>
+                            <option value="Safe RL">Safe RL</option>
+                            <option value="Distributed RL">Distributed RL</option>
+                            <option value="Memory Architecture">Memory Architecture</option>
+                            <option value="Reward Shaping">Reward Shaping</option>
+                            <option value="World Models">World Models</option>
+                        </select>
+                    </div>
+                    <!-- Input -->
+                    <div class="relative bg-white dark:bg-white/[0.04] rounded-xl border border-border-light dark:border-white/[0.1] p-2 focus-within:border-primary/40 focus-within:shadow-lg focus-within:shadow-primary/5 transition-all">
+                        <textarea id="user-input" class="w-full bg-transparent border-none focus:ring-0 text-sm py-2 px-2 resize-none text-text-light dark:text-text-dark placeholder-muted-light dark:placeholder-muted-dark overflow-hidden min-h-[44px]" placeholder="Ask about the RL papers..." rows="1"></textarea>
+                        <div class="flex items-center justify-end mt-1 px-1">
+                            <button id="send-btn" class="bg-primary hover:bg-primary-hover w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/25 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span class="material-icons-round text-sm">send</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results View -->
+        <div id="view-results" class="h-full overflow-y-auto p-4 md:p-6 custom-scrollbar hidden">
+            <div class="max-w-5xl mx-auto space-y-6 pb-8">
+
+                <!-- Progress Panel (shown during autoplay) -->
+                <div id="autoplay-progress" class="hidden">
+                    <div class="chart-card p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="material-icons-round text-primary animate-spin text-xl" id="progress-spinner">refresh</span>
+                            <h2 class="text-lg font-bold" id="progress-title">Running Autoplay...</h2>
+                        </div>
+                        <!-- Phase dots -->
+                        <div class="flex items-center gap-2 mb-4" id="phase-dots">
+                            <div class="phase-dot active" data-phase="notebook" title="Notebook"><span class="material-icons-round text-xs">code</span></div>
+                            <div class="w-8 h-[2px] bg-border-light dark:bg-border-dark phase-line"></div>
+                            <div class="phase-dot pending" data-phase="chat" title="Q&A Chat"><span class="material-icons-round text-xs">chat</span></div>
+                            <div class="w-8 h-[2px] bg-border-light dark:bg-border-dark phase-line"></div>
+                            <div class="phase-dot pending" data-phase="eval" title="Evaluation"><span class="material-icons-round text-xs">assessment</span></div>
+                            <div class="w-8 h-[2px] bg-border-light dark:bg-border-dark phase-line"></div>
+                            <div class="phase-dot pending" data-phase="charts" title="Charts"><span class="material-icons-round text-xs">bar_chart</span></div>
+                        </div>
+                        <!-- Progress bar -->
+                        <div class="autoplay-progress-bar mb-3">
+                            <div class="autoplay-progress-fill" id="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <!-- Status log -->
+                        <div id="progress-log" class="text-xs text-muted-light dark:text-muted-dark space-y-1 max-h-48 overflow-y-auto custom-scrollbar"></div>
+                    </div>
+                </div>
+
+                <!-- Results Content (shown after autoplay) -->
+                <div id="results-content" class="hidden space-y-8">
+                    <!-- Architecture Diagram -->
+                    <section>
+                        <h2 class="results-heading"><span class="material-icons-round text-sm mr-2 align-middle">account_tree</span>RAG Pipeline Architecture</h2>
+                        <div class="chart-card p-4 overflow-x-auto" id="architecture-container"></div>
+                    </section>
+
+                    <!-- Evaluation Summary Table -->
+                    <section>
+                        <h2 class="results-heading"><span class="material-icons-round text-sm mr-2 align-middle">assessment</span>Evaluation Summary</h2>
+                        <div class="chart-card overflow-x-auto" id="eval-table-container"></div>
+                    </section>
+
+                    <!-- Charts Grid -->
+                    <section>
+                        <h2 class="results-heading"><span class="material-icons-round text-sm mr-2 align-middle">bar_chart</span>Analysis Charts</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="chart-card p-3" id="chart-evaluation_scores">
+                                <p class="text-xs text-muted-light dark:text-muted-dark mb-2 font-medium">Evaluation Scores by Configuration</p>
+                            </div>
+                            <div class="chart-card p-3" id="chart-chunk_comparison">
+                                <p class="text-xs text-muted-light dark:text-muted-dark mb-2 font-medium">Performance vs Chunk Size</p>
+                            </div>
+                            <div class="chart-card p-3" id="chart-search_comparison">
+                                <p class="text-xs text-muted-light dark:text-muted-dark mb-2 font-medium">Vector vs Hybrid Search</p>
+                            </div>
+                            <div class="chart-card p-3" id="chart-judge_comparison">
+                                <p class="text-xs text-muted-light dark:text-muted-dark mb-2 font-medium">Heuristic vs LLM-as-Judge</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Sample Q&A -->
+                    <section>
+                        <h2 class="results-heading"><span class="material-icons-round text-sm mr-2 align-middle">question_answer</span>Sample Q&A Results</h2>
+                        <div id="chat-results-container" class="space-y-3"></div>
+                    </section>
+
+                    <!-- Downloads -->
+                    <section>
+                        <h2 class="results-heading"><span class="material-icons-round text-sm mr-2 align-middle">download</span>Download Results</h2>
+                        <div class="chart-card p-4">
+                            <p class="text-xs text-muted-light dark:text-muted-dark mb-3">Download all results, documentation, and the Jupyter notebook as a ZIP or individually.</p>
+                            <div class="flex flex-wrap gap-2">
+                                <button class="download-btn download-btn-primary" data-file="zip">
+                                    <span class="material-icons-round text-sm">folder_zip</span>Download All (ZIP)
+                                </button>
+                                <button class="download-btn" data-file="results.md">
+                                    <span class="material-icons-round text-xs">description</span>results.md
+                                </button>
+                                <button class="download-btn" data-file="readme.md">
+                                    <span class="material-icons-round text-xs">info</span>README.md
+                                </button>
+                                <button class="download-btn" data-file="process.md">
+                                    <span class="material-icons-round text-xs">build</span>process.md
+                                </button>
+                                <button class="download-btn" data-file="rag_pipeline.ipynb">
+                                    <span class="material-icons-round text-xs">code</span>Notebook
+                                </button>
+                                <button class="download-btn" data-file="requirements.txt">
+                                    <span class="material-icons-round text-xs">list</span>requirements.txt
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Empty state -->
+                <div id="results-empty" class="text-center py-16">
+                    <div class="w-16 h-16 bg-primary-soft dark:bg-primary/15 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <span class="material-icons-round text-3xl text-primary">insights</span>
+                    </div>
+                    <h2 class="text-xl font-bold mb-2">No Results Yet</h2>
+                    <p class="text-muted-light dark:text-muted-dark text-sm max-w-md mx-auto mb-6">
+                        Click <strong>Autoplay</strong> to run the entire RAG pipeline automatically and generate evaluation results, charts, and downloadable artifacts.
+                    </p>
+                    <button onclick="document.getElementById('autoplay-btn').click()" class="autoplay-btn">
+                        <span class="material-icons-round text-sm">rocket_launch</span>
+                        <span>Start Autoplay</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Background Glow -->
+    <div class="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 dark:bg-primary/15 rounded-full blur-[120px] pointer-events-none -z-10 animate-pulse-slow"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-blue-400/8 dark:bg-blue-900/15 rounded-full blur-[100px] pointer-events-none -z-10 animate-pulse-slow"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
