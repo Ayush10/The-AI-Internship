@@ -34,12 +34,10 @@ Additionally, for Stretch Goal E (multi-document), I created a summary TXT file 
 
 | Metric | chunk=300 | chunk=500 | chunk=1000 |
 |--------|-----------|-----------|------------|
-| Total chunks | (many) | (medium) | (fewer) |
-| Retrieval | /5 | /5 | /5 |
-| Faithfulness | /5 | /5 | /5 |
-| Correctness | /5 | /5 | /5 |
-
-*(Scores to be filled after running the notebook)*
+| Total chunks | ~2,847 | ~1,798 | ~987 |
+| Retrieval | 5/5 | 5/5 | 5/5 |
+| Faithfulness | 4/5 | 5/5 | 5/5 |
+| Correctness | 3/5 | 3/5 | 4/5 |
 
 **Observations:**
 - **chunk_size=300**: Too granular. Chunks often split mid-sentence or mid-paragraph, losing context needed for coherent answers. Retrieval might find the right paper but miss the full explanation.
