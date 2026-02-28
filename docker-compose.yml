@@ -21,7 +21,7 @@ services:
     env_file:
       - .env
     environment:
-      - BASE_PATH=/week1
+      - BASE_PATH=/week1/llm-api-playground
     expose:
       - "8001"
     volumes:
@@ -36,7 +36,7 @@ services:
       dockerfile: week2/Dockerfile
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - BASE_PATH=/week2
+      - BASE_PATH=/week2/rag-document-qa
     expose:
       - "8002"
     depends_on:
