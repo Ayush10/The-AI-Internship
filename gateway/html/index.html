@@ -48,8 +48,8 @@
         .card-hover { transition: transform 0.2s, box-shadow 0.2s; }
         .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
         .dark .card-hover:hover { box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-        .timeline-line { background: linear-gradient(to right, #6d28d9, #2563eb, #d1d5db); }
-        .dark .timeline-line { background: linear-gradient(to right, #8b5cf6, #3b82f6, #404040); }
+        .timeline-line { background: linear-gradient(to right, #6d28d9, #2563eb, #059669); }
+        .dark .timeline-line { background: linear-gradient(to right, #8b5cf6, #3b82f6, #10b981); }
     </style>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen transition-colors duration-300">
@@ -103,6 +103,10 @@
                     <span class="material-icons-round text-sm">menu_book</span>
                     Week 2: RAG Pipeline
                 </a>
+                <a href="/week3/nexus/" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/25 hover:scale-[1.02] active:scale-[0.98]">
+                    <span class="material-icons-round text-sm">hub</span>
+                    Week 3: Multi-Agent
+                </a>
             </div>
         </div>
     </section>
@@ -132,11 +136,11 @@
                 </div>
                 <!-- Week 3 -->
                 <div class="relative flex flex-col items-center z-10">
-                    <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 mb-3">
-                        <span class="material-icons-round">schedule</span>
+                    <div class="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-600/25 mb-3">
+                        <span class="material-icons-round">check</span>
                     </div>
-                    <span class="text-xs font-bold text-gray-400 dark:text-gray-500">Week 3</span>
-                    <span class="text-[10px] text-muted-light dark:text-muted-dark mt-0.5">Coming Soon</span>
+                    <span class="text-xs font-bold text-emerald-600">Week 3</span>
+                    <span class="text-[10px] text-muted-light dark:text-muted-dark mt-0.5">Multi-Agent</span>
                 </div>
             </div>
         </div>
@@ -144,7 +148,7 @@
 
     <!-- Week Cards -->
     <section class="py-12 px-6">
-        <div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
+        <div class="max-w-5xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             <!-- Week 1 Card -->
             <div class="opacity-0 animate-fade-up" style="animation-delay: 0.3s; animation-fill-mode: forwards;">
                 <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl p-8 h-full card-hover">
@@ -258,6 +262,62 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Week 3 Card -->
+            <div class="opacity-0 animate-fade-up" style="animation-delay: 0.5s; animation-fill-mode: forwards;">
+                <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl p-8 h-full card-hover">
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/15 flex items-center justify-center flex-shrink-0">
+                            <span class="material-icons-round text-emerald-600 text-2xl">hub</span>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <h3 class="text-xl font-bold">Nexus Multi-Agent</h3>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">Live</span>
+                            </div>
+                            <p class="text-sm text-muted-light dark:text-muted-dark mt-1">Week 3 &mdash; Multi-agent customer support with MCP & A2A</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-muted-light dark:text-muted-dark mb-6 leading-relaxed">
+                        A multi-agent customer support system built with Google ADK. Features a root router that delegates to billing (MCP), returns (A2A), and escalation sub-agents with real-time streaming.
+                    </p>
+                    <ul class="space-y-2 mb-6">
+                        <li class="flex items-center gap-2 text-sm text-muted-light dark:text-muted-dark">
+                            <span class="material-icons-round text-emerald-600 text-sm">check</span>
+                            Root router + 3 specialist sub-agents
+                        </li>
+                        <li class="flex items-center gap-2 text-sm text-muted-light dark:text-muted-dark">
+                            <span class="material-icons-round text-emerald-600 text-sm">check</span>
+                            MCP integration with Supabase database
+                        </li>
+                        <li class="flex items-center gap-2 text-sm text-muted-light dark:text-muted-dark">
+                            <span class="material-icons-round text-emerald-600 text-sm">check</span>
+                            A2A protocol for returns microservice
+                        </li>
+                        <li class="flex items-center gap-2 text-sm text-muted-light dark:text-muted-dark">
+                            <span class="material-icons-round text-emerald-600 text-sm">check</span>
+                            Real-time SSE streaming with agent activity
+                        </li>
+                    </ul>
+                    <div class="flex flex-wrap gap-2 mb-6">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-muted-light dark:text-muted-dark">Google ADK</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-muted-light dark:text-muted-dark">Gemini</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-muted-light dark:text-muted-dark">Supabase</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-muted-light dark:text-muted-dark">MCP</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-muted-light dark:text-muted-dark">A2A</span>
+                    </div>
+                    <div class="flex items-center gap-3 pt-6 border-t border-border-light dark:border-border-dark">
+                        <a href="/week3/nexus/" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-all text-sm shadow-lg shadow-emerald-600/20 hover:scale-[1.02] active:scale-[0.98]">
+                            Launch App
+                            <span class="material-icons-round text-sm">arrow_forward</span>
+                        </a>
+                        <a href="/week3/docs" target="_blank" class="inline-flex items-center gap-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-text-light dark:text-text-dark font-semibold px-4 py-2.5 rounded-xl transition-all text-sm border border-gray-200 dark:border-white/10">
+                            <span class="material-icons-round text-sm">description</span>
+                            API Docs
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -275,6 +335,10 @@
                 <span class="px-4 py-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm font-medium">Anthropic</span>
                 <span class="px-4 py-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm font-medium">Gemini</span>
                 <span class="px-4 py-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm font-medium">SQLAlchemy</span>
+                <span class="px-4 py-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm font-medium">Google ADK</span>
+                <span class="px-4 py-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm font-medium">Supabase</span>
+                <span class="px-4 py-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm font-medium">MCP</span>
+                <span class="px-4 py-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm font-medium">A2A Protocol</span>
                 <span class="px-4 py-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm font-medium">Tailwind CSS</span>
                 <span class="px-4 py-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm font-medium">Docker</span>
                 <span class="px-4 py-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm font-medium">Nginx</span>

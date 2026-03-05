@@ -1,0 +1,177 @@
+/* Nexus — Custom Styles */
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-slow { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.8; } }
+@keyframes pulse-dot { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.7; } }
+@keyframes slide-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+
+.animate-fade-up { animation: fade-up 0.4s ease-out forwards; }
+.animate-pulse-slow { animation: pulse-slow 4s ease-in-out infinite; }
+.animate-pulse-dot { animation: pulse-dot 1.2s ease-in-out infinite; }
+.animate-slide-in { animation: slide-in 0.3s ease-out forwards; }
+
+/* Glass morphism */
+.glass {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.7);
+}
+.dark .glass {
+    background: rgba(10, 10, 10, 0.8);
+}
+
+/* Tabs */
+.tab-btn {
+    color: #666;
+    background: transparent;
+}
+.dark .tab-btn {
+    color: #a3a3a3;
+}
+.tab-btn.tab-active {
+    background: white;
+    color: #059669;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.dark .tab-btn.tab-active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #10b981;
+}
+
+/* Agent badge */
+.agent-badge-idle {
+    background: rgba(156, 163, 175, 0.1);
+    border-color: rgba(156, 163, 175, 0.2);
+    color: #9ca3af;
+}
+.agent-badge-billing {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.2);
+    color: #2563eb;
+}
+.agent-badge-returns {
+    background: rgba(124, 58, 237, 0.1);
+    border-color: rgba(124, 58, 237, 0.2);
+    color: #7c3aed;
+}
+.agent-badge-escalation {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+.agent-badge-router {
+    background: rgba(5, 150, 105, 0.1);
+    border-color: rgba(5, 150, 105, 0.2);
+    color: #059669;
+}
+
+/* Example prompt chips */
+.example-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+/* Chat bubbles */
+.bubble-user {
+    background: #059669;
+    color: white;
+    border-radius: 16px 16px 4px 16px;
+    padding: 10px 16px;
+    max-width: 80%;
+    margin-left: auto;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.bubble-assistant {
+    background: rgba(250, 250, 249, 0.85);
+    border: 1px solid #e5e5e5;
+    border-radius: 16px 16px 16px 4px;
+    padding: 10px 16px;
+    max-width: 85%;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.dark .bubble-assistant {
+    background: rgba(26, 26, 26, 0.85);
+    border-color: #2a2a2a;
+}
+
+/* Activity log items */
+.activity-item {
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    border: 1px solid;
+}
+.activity-routing {
+    background: rgba(5, 150, 105, 0.05);
+    border-color: rgba(5, 150, 105, 0.15);
+}
+.activity-tool {
+    background: rgba(37, 99, 235, 0.05);
+    border-color: rgba(37, 99, 235, 0.15);
+}
+.activity-tool-result {
+    background: rgba(245, 158, 11, 0.05);
+    border-color: rgba(245, 158, 11, 0.15);
+}
+
+/* Scenario result cards */
+.scenario-card {
+    border-radius: 16px;
+    border: 1px solid;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+.scenario-pass {
+    border-color: rgba(5, 150, 105, 0.3);
+}
+.scenario-fail {
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Mermaid dark mode */
+.dark .mermaid-container svg {
+    filter: invert(0.88) hue-rotate(180deg);
+}
+
+/* Markdown in chat */
+.bubble-assistant p { margin: 0.5em 0; }
+.bubble-assistant p:first-child { margin-top: 0; }
+.bubble-assistant p:last-child { margin-bottom: 0; }
+.bubble-assistant ul, .bubble-assistant ol { margin: 0.5em 0; padding-left: 1.5em; }
+.bubble-assistant code {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+}
+.dark .bubble-assistant code {
+    background: rgba(255, 255, 255, 0.08);
+}
+.bubble-assistant strong { font-weight: 600; }

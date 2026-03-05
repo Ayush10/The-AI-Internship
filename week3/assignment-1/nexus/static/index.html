@@ -1,0 +1,271 @@
+<!doctype html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Nexus — Multi-Agent Support | Week 3</title>
+    <link rel="icon" type="image/svg+xml" href="static/favicon.svg" />
+    <link rel="stylesheet" href="static/style.css" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.0/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    primary: "#059669",
+                    "primary-hover": "#047857",
+                    "primary-light": "#10b981",
+                    "primary-soft": "#d1fae5",
+                    accent: "#7c3aed",
+                    "accent-light": "#8b5cf6",
+                    "accent-soft": "#ede9fe",
+                    mcp: "#2563eb",
+                    a2a: "#7c3aed",
+                    "background-light": "#fafaf9",
+                    "background-dark": "#0a0a0a",
+                    "surface-light": "#ffffff",
+                    "surface-dark": "#141414",
+                    "card-light": "#ffffff",
+                    "card-dark": "#1a1a1a",
+                    "text-light": "#1a1a1a",
+                    "text-dark": "#e5e5e5",
+                    "muted-light": "#666666",
+                    "muted-dark": "#a3a3a3",
+                    "border-light": "#e5e5e5",
+                    "border-dark": "#2a2a2a",
+                },
+                fontFamily: {
+                    display: ["DM Sans", "sans-serif"],
+                    mono: ["JetBrains Mono", "monospace"],
+                },
+            },
+        },
+    };
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen transition-colors duration-300">
+
+    <!-- Background Glow -->
+    <div class="fixed top-[-15%] left-[-10%] w-[45%] h-[45%] bg-primary/10 dark:bg-primary/15 rounded-full blur-[150px] pointer-events-none -z-10 animate-pulse-slow"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-[35%] h-[35%] bg-accent/8 dark:bg-accent/10 rounded-full blur-[120px] pointer-events-none -z-10 animate-pulse-slow"></div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 glass border-b border-border-light dark:border-border-dark">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-gradient-to-br from-primary to-primary-light rounded-xl flex items-center justify-center shadow-lg shadow-primary/25">
+                    <span class="material-icons-round text-white text-lg">hub</span>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold tracking-tight">Nexus</h1>
+                    <p class="text-[10px] text-muted-light dark:text-muted-dark">Multi-Agent Support — Week 3</p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <nav class="hidden sm:flex items-center gap-1 bg-gray-100 dark:bg-white/5 rounded-xl p-1">
+                <button onclick="switchTab('chat')" id="tab-chat" class="tab-btn tab-active px-4 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                    <span class="material-icons-round text-sm align-middle mr-1">chat</span>Chat
+                </button>
+                <button onclick="switchTab('architecture')" id="tab-architecture" class="tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                    <span class="material-icons-round text-sm align-middle mr-1">account_tree</span>Architecture
+                </button>
+                <button onclick="switchTab('results')" id="tab-results" class="tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                    <span class="material-icons-round text-sm align-middle mr-1">assessment</span>Results
+                </button>
+            </nav>
+
+            <div class="flex items-center gap-2">
+                <!-- Agent Status Badge -->
+                <div id="agent-badge" class="hidden items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border agent-badge-idle">
+                    <span id="agent-badge-dot" class="w-2 h-2 rounded-full bg-gray-400"></span>
+                    <span id="agent-badge-text">Idle</span>
+                </div>
+                <button id="theme-toggle" onclick="toggleTheme()" class="text-muted-light dark:text-muted-dark hover:text-primary transition-colors p-2 rounded-full hover:bg-primary-soft dark:hover:bg-white/5">
+                    <span class="material-icons-round text-lg" id="theme-icon">light_mode</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Tabs -->
+    <nav class="sm:hidden flex items-center gap-1 px-4 py-2 bg-gray-50 dark:bg-surface-dark border-b border-border-light dark:border-border-dark">
+        <button onclick="switchTab('chat')" id="mtab-chat" class="tab-btn tab-active flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-center">Chat</button>
+        <button onclick="switchTab('architecture')" id="mtab-architecture" class="tab-btn flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-center">Arch</button>
+        <button onclick="switchTab('results')" id="mtab-results" class="tab-btn flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-center">Results</button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+
+        <!-- ═══ CHAT TAB ═══ -->
+        <div id="panel-chat" class="tab-panel">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" style="height: calc(100vh - 180px);">
+
+                <!-- Chat Area -->
+                <div class="lg:col-span-2 flex flex-col bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden">
+                    <!-- Messages -->
+                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar">
+                        <div class="text-center py-12">
+                            <div class="w-16 h-16 mx-auto mb-4 bg-primary-soft dark:bg-primary/15 rounded-2xl flex items-center justify-center">
+                                <span class="material-icons-round text-primary text-3xl">support_agent</span>
+                            </div>
+                            <h2 class="text-lg font-bold mb-2">Nexus Customer Support</h2>
+                            <p class="text-sm text-muted-light dark:text-muted-dark max-w-md mx-auto">Multi-agent system with billing (MCP), returns (A2A), and escalation specialists. Try an example below.</p>
+                        </div>
+                    </div>
+
+                    <!-- Example Prompts -->
+                    <div id="example-prompts" class="px-4 sm:px-6 pb-3">
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="sendExample('billing')" class="example-chip bg-mcp/10 text-mcp border-mcp/20 hover:bg-mcp/20">
+                                <span class="material-icons-round text-xs">receipt_long</span>I was charged twice — check my orders
+                            </button>
+                            <button onclick="sendExample('returns')" class="example-chip bg-a2a/10 text-a2a border-a2a/20 hover:bg-a2a/20">
+                                <span class="material-icons-round text-xs">assignment_return</span>Return order #3 — arrived damaged
+                            </button>
+                            <button onclick="sendExample('escalation')" class="example-chip bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20">
+                                <span class="material-icons-round text-xs">warning</span>This is unacceptable! I want a manager!
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Input -->
+                    <div class="p-4 sm:p-6 pt-3 border-t border-border-light dark:border-border-dark">
+                        <form id="chat-form" onsubmit="handleSend(event)" class="flex gap-3">
+                            <input id="chat-input" type="text" placeholder="Describe your support issue..."
+                                class="flex-1 bg-gray-50 dark:bg-white/5 border border-border-light dark:border-border-dark rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-muted-light dark:placeholder:text-muted-dark" />
+                            <button type="submit" id="send-btn"
+                                class="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                                <span class="material-icons-round text-sm">send</span>
+                                Send
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Activity Log Sidebar -->
+                <div class="hidden lg:flex flex-col bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden">
+                    <div class="px-4 py-3 border-b border-border-light dark:border-border-dark flex items-center gap-2">
+                        <span class="material-icons-round text-primary text-sm">timeline</span>
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-muted-light dark:text-muted-dark">Agent Activity</h3>
+                    </div>
+                    <div id="activity-log" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                        <p class="text-xs text-muted-light dark:text-muted-dark text-center py-8">Activity will appear here as agents process your request.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ ARCHITECTURE TAB ═══ -->
+        <div id="panel-architecture" class="tab-panel hidden">
+            <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl p-6 sm:p-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="material-icons-round text-primary text-2xl">account_tree</span>
+                    <div>
+                        <h2 class="text-xl font-bold">Agent Architecture</h2>
+                        <p class="text-sm text-muted-light dark:text-muted-dark">Root router delegates to 3 specialist sub-agents</p>
+                    </div>
+                </div>
+                <div id="mermaid-diagram" class="flex justify-center overflow-x-auto py-4"></div>
+
+                <!-- Legend -->
+                <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-primary"></div>
+                        <span class="text-xs text-muted-light dark:text-muted-dark">Root Router</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-mcp"></div>
+                        <span class="text-xs text-muted-light dark:text-muted-dark">MCP Agent (Supabase)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-a2a"></div>
+                        <span class="text-xs text-muted-light dark:text-muted-dark">A2A Agent (Remote)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-amber-500"></div>
+                        <span class="text-xs text-muted-light dark:text-muted-dark">Database</span>
+                    </div>
+                </div>
+
+                <!-- Protocol Explanation -->
+                <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-mcp/5 border border-mcp/15 rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="material-icons-round text-mcp text-sm">cloud</span>
+                            <h4 class="text-sm font-bold text-mcp">MCP (Model Context Protocol)</h4>
+                        </div>
+                        <p class="text-xs text-muted-light dark:text-muted-dark leading-relaxed">Billing and Escalation agents connect to Supabase via MCP, enabling SQL queries against customers, orders, and support tickets tables.</p>
+                    </div>
+                    <div class="bg-a2a/5 border border-a2a/15 rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="material-icons-round text-a2a text-sm">swap_horiz</span>
+                            <h4 class="text-sm font-bold text-a2a">A2A (Agent-to-Agent)</h4>
+                        </div>
+                        <p class="text-xs text-muted-light dark:text-muted-dark leading-relaxed">Returns agent runs as a separate microservice on port 8001, exposed via to_a2a(). The root router communicates with it using RemoteA2aAgent.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ RESULTS TAB ═══ -->
+        <div id="panel-results" class="tab-panel hidden">
+            <div class="space-y-6">
+                <!-- Autoplay Control -->
+                <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-bold mb-1">Autoplay</h2>
+                            <p class="text-sm text-muted-light dark:text-muted-dark">Run all 3 test scenarios (billing, returns, escalation) end-to-end.</p>
+                        </div>
+                        <button onclick="runAutoplay()" id="autoplay-btn"
+                            class="bg-gradient-to-r from-primary to-primary-light hover:from-primary-hover hover:to-primary text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap">
+                            <span class="material-icons-round text-sm">rocket_launch</span>
+                            Run All Scenarios
+                        </button>
+                    </div>
+
+                    <!-- Progress -->
+                    <div id="autoplay-progress" class="hidden mt-6">
+                        <div class="flex items-center gap-4 mb-3">
+                            <div id="phase-dots" class="flex gap-2"></div>
+                            <span id="autoplay-status" class="text-xs text-muted-light dark:text-muted-dark"></span>
+                        </div>
+                        <div class="w-full h-2 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                            <div id="autoplay-bar" class="h-full bg-gradient-to-r from-primary to-primary-light rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Table (populated after autoplay) -->
+                <div id="results-container" class="hidden space-y-6">
+                    <!-- Routing Accuracy Card -->
+                    <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+                        <h3 class="text-lg font-bold mb-4">Routing Accuracy</h3>
+                        <div id="accuracy-display" class="text-4xl font-bold text-primary"></div>
+                    </div>
+
+                    <!-- Scenario Results -->
+                    <div id="scenario-results" class="space-y-4"></div>
+
+                    <!-- Download -->
+                    <div class="flex justify-center">
+                        <button onclick="downloadResults()" class="bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-semibold px-6 py-3 rounded-xl text-sm transition-all flex items-center gap-2">
+                            <span class="material-icons-round text-sm">download</span>
+                            Download Results (ZIP)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="static/app.js"></script>
+</body>
+</html>

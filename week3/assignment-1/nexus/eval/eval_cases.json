@@ -1,0 +1,50 @@
+[
+  {
+    "id": "billing_order_lookup",
+    "name": "Billing — Order Lookup",
+    "message": "What's the total on order #5? My email is customer3@example.com",
+    "expected_agent": "billing_agent",
+    "expected_tools": ["execute_sql"],
+    "expected_keywords": ["order", "amount", "$"]
+  },
+  {
+    "id": "billing_customer_history",
+    "name": "Billing — Customer History",
+    "message": "Show me all orders for customer3@example.com",
+    "expected_agent": "billing_agent",
+    "expected_tools": ["execute_sql"],
+    "expected_keywords": ["order"]
+  },
+  {
+    "id": "returns_eligibility",
+    "name": "Returns — Eligibility Check",
+    "message": "Can I return order #3? It arrived with a scratch.",
+    "expected_agent": "returns_agent",
+    "expected_tools": ["check_return_eligibility"],
+    "expected_keywords": ["eligible", "return"]
+  },
+  {
+    "id": "returns_initiate",
+    "name": "Returns — Initiate Return",
+    "message": "I want to return order 3 because it arrived damaged. Please start the return process.",
+    "expected_agent": "returns_agent",
+    "expected_tools": ["initiate_return"],
+    "expected_keywords": ["return", "RMA"]
+  },
+  {
+    "id": "escalation_angry",
+    "name": "Escalation — Angry Customer",
+    "message": "This is UNACCEPTABLE! I've been waiting THREE WEEKS for my refund. I want a manager NOW or I'm filing a chargeback!",
+    "expected_agent": "escalation_agent",
+    "expected_tools": ["execute_sql"],
+    "expected_keywords": ["understand", "frustration", "ticket", "escalat"]
+  },
+  {
+    "id": "routing_ambiguous",
+    "name": "Routing — Ambiguous Query",
+    "message": "I have a problem with my order",
+    "expected_agent": "nexus_support_router",
+    "expected_tools": [],
+    "expected_keywords": ["?"]
+  }
+]

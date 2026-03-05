@@ -10,6 +10,8 @@ services:
         condition: service_healthy
       week2:
         condition: service_healthy
+      week3-nexus:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.aiinternship-http.entryPoints=http"
@@ -57,6 +59,21 @@ services:
     volumes:
       - chroma_data:/app/chroma_db
     networks:
+      - internal
+
+  week3-nexus:
+    build:
+      context: .
+      dockerfile: week3/assignment-1/nexus/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - BASE_PATH=/week3/nexus
+      - RETURNS_A2A_URL=http://localhost:8001
+    expose:
+      - "8003"
+    networks:
+      - coolify
       - internal
 
   ollama:
