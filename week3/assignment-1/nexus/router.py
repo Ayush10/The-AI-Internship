@@ -126,7 +126,8 @@ async def autoplay(theme: str = Query(default="dark")):
                 "message": scenario["message"],
             })
 
-            sid = await create_session(user_id=f"autoplay_{scenario['id']}")
+            autoplay_user = f"autoplay_{scenario['id']}"
+            sid = await create_session(user_id=autoplay_user)
             scenario_result = {
                 "id": scenario["id"],
                 "name": scenario["name"],
@@ -139,9 +140,9 @@ async def autoplay(theme: str = Query(default="dark")):
             }
 
             try:
-                async for event in run_query(sid, scenario["message"]):
+                async for event in run_query(sid, scenario["message"], user_id=autoplay_user):
                     scenario_result["events"].append(event)
-                    yield _sse({"type": "scenario_event", "index": i, **event})
+                    yield _sse({"type": "scenario_event", "index": i, "event_type": event["type"], **event})
 
                     if event["type"] == "routing":
                         scenario_result["actual_agent"] = event["agent"]
@@ -169,7 +170,11 @@ async def autoplay(theme: str = Query(default="dark")):
                 "index": i,
                 "routing_correct": routing_correct,
                 "actual_agent": scenario_result["actual_agent"],
+                "expected_agent": scenario["expected_agent"],
                 "tool_call_count": len(scenario_result["tool_calls"]),
+                "tool_names": [tc.get("tool", "") for tc in scenario_result["tool_calls"]],
+                "message": scenario["message"],
+                "response": (scenario_result["response"] or "")[:600],
             })
 
         # Cache results
